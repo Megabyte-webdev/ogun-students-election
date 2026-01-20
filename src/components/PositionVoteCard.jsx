@@ -31,7 +31,7 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
 
   const handleSubmit = async () => {
     if (Object.keys(votes).length !== positions.length) {
-      return setError("Vote for all positions before submitting.");
+      return setError("Please vote for all positions before submitting.");
     }
 
     setSubmitting(true);
@@ -47,13 +47,14 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
             biometricPayload: user.biometricPayload,
             positionId,
             candidateId,
-          }),
-        ),
+          })
+        )
       );
 
       const failed = results.find((r) => r.error);
-      if (failed) setError(failed.error);
-      else {
+      if (failed) {
+        setError(failed.error);
+      } else {
         alert("Votes submitted successfully!");
         onClose();
       }
@@ -76,7 +77,9 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold mb-4">Vote for Positions</h2>
+
       {error && <p className="text-red-600">{error}</p>}
+
       {positions.map((pos) => (
         <div key={pos.id} className="border-b pb-4">
           <h3 className="text-lg font-semibold">{pos.name}</h3>
@@ -106,4 +109,5 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
       </button>
     </div>
   );
-}
+        }
+      
