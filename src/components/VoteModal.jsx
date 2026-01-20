@@ -13,19 +13,47 @@ function getOrCreateDeviceId() {
   return id;
 }
 
+function formatMatricInput(value) {
+  const raw = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+
+  let formatted = "";
+  for (let i = 0; i < raw.length; i++) {
+    formatted += raw[i];
+    if (i === 2 || i === 4 || i === 6) {
+      formatted += "/";
+    }
+  }
+
+  return formatted.slice(0, 14);
+}
+
 async function runWebAuthnScan() {
+  if (!window.PublicKeyCredential) {
+    throw new Error("WebAuthn not supported.");
+  }
+
   const challenge = crypto.getRandomValues(new Uint8Array(32));
 
-  const credential = await navigator.credentials.get({
+  const credential = await navigator.credentials.create({
     publicKey: {
       challenge,
+      rp: { name: "Voting System" },
+      user: {
+        id: crypto.getRandomValues(new Uint8Array(16)),
+        name: "voter",
+        displayName: "Voter",
+      },
+      pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+      authenticatorSelection: {
+        userVerification: "required",
+      },
       timeout: 60000,
-      userVerification: "required",
     },
   });
 
-  const raw = new Uint8Array(credential.response.authenticatorData);
+  const raw = new Uint8Array(credential.response.attestationObject);
   const hashBuffer = await crypto.subtle.digest("SHA-256", raw);
+
   return Array.from(new Uint8Array(hashBuffer))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
@@ -44,13 +72,12 @@ export default function VoteModal({ election, onClose }) {
     setDeviceId(getOrCreateDeviceId());
   }, []);
 
-  const handleNextFromDetails = () => {
-    if (!matricNo.trim()) {
-      setError("Matric number is required.");
-      return;
-    }
+  const handleMatricChange = (e) => {
+    setMatricNo(formatMatricInput(e.target.value));
+  };
 
-    if (!MATRIC_REGEX.test(matricNo.trim())) {
+  const handleNextFromDetails = () => {
+    if (!MATRIC_REGEX.test(matricNo)) {
       setError("Invalid matric format. Example: EES/21/22/0093");
       return;
     }
@@ -64,10 +91,6 @@ export default function VoteModal({ election, onClose }) {
     setScanning(true);
 
     try {
-      if (!window.PublicKeyCredential) {
-        throw new Error("Biometric authentication not supported.");
-      }
-
       const hash = await runWebAuthnScan();
       setBiometricPayload(hash);
       setStep(3);
@@ -97,7 +120,7 @@ export default function VoteModal({ election, onClose }) {
             type="text"
             placeholder="EES/21/22/0093"
             value={matricNo}
-            onChange={(e) => setMatricNo(e.target.value.toUpperCase())}
+            onChange={handleMatricChange}
             className="w-full p-2 border rounded"
           />
 
@@ -155,4 +178,5 @@ export default function VoteModal({ election, onClose }) {
       )}
     </Modal>
   );
-      }
+                          }
+      
