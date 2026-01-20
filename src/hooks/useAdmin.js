@@ -53,6 +53,7 @@ const useAdmin = () => {
     activateElection,
     deactivateElection,
     get,
+    post
   };
 };
 
