@@ -40,7 +40,7 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
     try {
       const results = await Promise.all(
         Object.entries(votes).map(([positionId, candidateId]) =>
-          post("/vote/submit-vote", {
+          post("vote/submit-vote", {
             matricNo: user.matricNo,
             deviceId: user.deviceId,
             biometricType: user.biometricType,
