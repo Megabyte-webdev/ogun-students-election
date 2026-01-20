@@ -1,0 +1,59 @@
+// hooks/useAdmin.js
+import { useAuth } from "../context/AuthContext";
+
+const API_BASE = "http://voting-system-mocha.vercel.app/api/admin";
+
+const useAdmin = () => {
+  const { token } = useAuth(); // token from context
+
+  async function post(endpoint, body) {
+    const res = await fetch(`${API_BASE}/${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-token": token,
+      },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  }
+
+  async function get(endpoint) {
+    const res = await fetch(`${API_BASE}/${endpoint}`, {
+      headers: {
+        "x-admin-token": token,
+      },
+    });
+    return res.json();
+  }
+
+  const activateElection = async (id) => {
+    const res = await fetch(`${API_BASE}/${id}/activate`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-admin-token": token },
+    });
+    return res.json();
+  };
+  const deactivateElection = async (id) => {
+    const res = await fetch(`${API_BASE}/${id}/deactivate`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-admin-token": token },
+    });
+    return res.json();
+  };
+
+  // Functions exposed to components
+  return {
+    createElection: (data) => post("elections", data),
+    createPosition: (data) => post("positions", data),
+    createCandidate: (data) => post("candidates", data),
+    closeElection: (id) => post(`elections/${id}/close`),
+    listVotes: () => get("votes"),
+    listAbuseLogs: () => get("abuse-logs"),
+    activateElection,
+    deactivateElection,
+    get,
+  };
+};
+
+export default useAdmin;
