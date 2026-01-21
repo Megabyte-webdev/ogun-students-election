@@ -1,13 +1,13 @@
 // hooks/useAdmin.js
 import { useAuth } from "../context/AuthContext";
 
-const API_BASE = "https://voting-system-mocha.vercel.app/api/admin";
+const API_BASE = "https://voting-system-mocha.vercel.app/api";
 
 const useAdmin = () => {
   const { token } = useAuth(); // token from context
 
   async function post(endpoint, body) {
-    const res = await fetch(`${API_BASE}/${endpoint}`, {
+    const res = await fetch(`${API_BASE}/admon/${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -18,8 +18,19 @@ const useAdmin = () => {
     return res.json();
   }
 
-  async function get(endpoint) {
+  async function postVote(endpoint, body) {
     const res = await fetch(`${API_BASE}/${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  }
+
+  async function get(endpoint) {
+    const res = await fetch(`${API_BASE}/admin/${endpoint}`, {
       headers: {
         "x-admin-token": token,
       },
@@ -53,7 +64,7 @@ const useAdmin = () => {
     activateElection,
     deactivateElection,
     get,
-    post
+    post: postVote
   };
 };
 
