@@ -43,8 +43,11 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
           post("vote/submit-vote", {
             matricNo: user.matricNo,
             deviceId: user.deviceId,
-            biometricType: user.biometricType ?? "none",
-            biometricPayload: user.biometricPayload,
+            biometricType: user.biometricType || "none",
+  biometricPayload:
+    user.biometricType && user.biometricType !== "none"
+      ? user.biometricPayload
+      : null,
             positionId,
             candidateId,
           })
