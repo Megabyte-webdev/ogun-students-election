@@ -178,5 +178,5 @@ export default function VoteModal({ election, onClose }) {
       )}
     </Modal>
   );
-                          }
-      
+    }
+                      
