@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
+import HomePage from "./pages/HomePage";
 import AdminDashboard from "./pages/AdminDashboard";
 import Vote from "./pages/Vote";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -16,7 +16,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Login />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/register" element={<Signup />} />
           <Route path="/vote" element={<VotingDashboard />} />
 

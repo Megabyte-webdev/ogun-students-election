@@ -101,9 +101,8 @@ export default function AdminDashboard() {
   // Actions
   const handleActivate = async (type, id, activate = true) => {
     if (type === "elections") {
-      if (activate)
-        await activateElection(id); // PATCH /api/elections/:id/activate
-      else await deactivateElection(id); // PATCH /api/elections/:id/deactivate
+      if (activate) await activateElection(id);
+      else await deactivateElection(id);
     }
 
     if (type === "positions") await activatePosition(id);
@@ -129,6 +128,16 @@ export default function AdminDashboard() {
         accessor: "actions",
         cell: (row) => (
           <div className="flex items-center space-x-2">
+            {/* Edit Button */}
+            <button
+              onClick={() =>
+                setModal({ open: true, type: "elections", election: row })
+              }
+              className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
+            >
+              Edit
+            </button>
+
             {/* Activate / Deactivate Button */}
             {row.status === "active" ? (
               <button
@@ -204,6 +213,23 @@ export default function AdminDashboard() {
           </div>
         ),
       },
+    ],
+    votes: [
+      { header: "User ID", accessor: "userId" },
+      { header: "Candidate", accessor: "candidate" },
+      { header: "Position", accessor: "position" },
+      {
+        header: "Time of Vote",
+        accessor: "createdAt",
+      },
+    ],
+    abuse: [
+      { header: "Matric No", accessor: "matricNo" },
+      { header: "Biometric Type", accessor: "biometricType" },
+      { header: "Action", accessor: "action" },
+      { header: "IP Address", accessor: "ipAddress" },
+      { header: "User Agent", accessor: "userAgent" },
+      { header: "Occurred At", accessor: "occurredAt" },
     ],
   };
 
@@ -360,6 +386,7 @@ export default function AdminDashboard() {
       >
         {modal.type === "elections" && (
           <ElectionForm
+            election={modal?.election}
             onCreated={() => {
               fetchStats();
               setModal({ open: false });

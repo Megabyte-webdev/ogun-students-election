@@ -1,63 +1,21 @@
 import React, { useState, useEffect } from "react";
 import Modal from "./Modal";
 import PositionVoteCard from "./PositionVoteCard";
-
-const MATRIC_REGEX = /^[A-Z]{3}\/\d{2}\/\d{2}\/\d{4}$/;
-
-function getOrCreateDeviceId() {
-  let id = localStorage.getItem("device_id");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("device_id", id);
-  }
-  return id;
-}
-
-function formatMatricInput(value) {
-  const raw = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-
-  let formatted = "";
-  for (let i = 0; i < raw.length; i++) {
-    formatted += raw[i];
-    if (i === 2 || i === 4 || i === 6) {
-      formatted += "/";
-    }
-  }
-
-  return formatted.slice(0, 14);
-}
-
-async function runWebAuthnScan() {
-  if (!window.PublicKeyCredential) {
-    throw new Error("WebAuthn not supported.");
-  }
-
-  const challenge = crypto.getRandomValues(new Uint8Array(32));
-
-  const credential = await navigator.credentials.create({
-    publicKey: {
-      challenge,
-      rp: { name: "Voting System" },
-      user: {
-        id: crypto.getRandomValues(new Uint8Array(16)),
-        name: "voter",
-        displayName: "Voter",
-      },
-      pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-      authenticatorSelection: {
-        userVerification: "required",
-      },
-      timeout: 60000,
-    },
-  });
-
-  const raw = new Uint8Array(credential.response.attestationObject);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", raw);
-
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
+import {
+  Fingerprint,
+  ShieldCheck,
+  CreditCard,
+  Cpu,
+  ArrowRight,
+  Loader2,
+} from "lucide-react";
+import {
+  extractErrorMessage,
+  getOrCreateDeviceId,
+  MATRIC_REGEX,
+  runWebAuthnScan,
+} from "../utils/formatters";
+import MatricInput from "./MatricInput";
 
 export default function VoteModal({ election, onClose }) {
   const [step, setStep] = useState(1);
@@ -69,19 +27,15 @@ export default function VoteModal({ election, onClose }) {
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
+    // Generate device ID logic...
     setDeviceId(getOrCreateDeviceId());
   }, []);
 
-  const handleMatricChange = (e) => {
-    setMatricNo(formatMatricInput(e.target.value));
-  };
-
   const handleNextFromDetails = () => {
     if (!MATRIC_REGEX.test(matricNo)) {
-      setError("Invalid matric format. Example: EES/21/22/0093");
+      setError("Please enter a valid format (e.g., EES/24/25/0000)");
       return;
     }
-
     setError("");
     setStep(2);
   };
@@ -89,94 +43,140 @@ export default function VoteModal({ election, onClose }) {
   const handleBiometricScan = async () => {
     setError("");
     setScanning(true);
-
     try {
       const hash = await runWebAuthnScan();
       setBiometricPayload(hash);
       setStep(3);
     } catch (err) {
-      console.error(err);
-      setError("Biometric scan failed. Try again or use fallback.");
+      setError(
+        extractErrorMessage(err) ||
+          "Biometric authentication failed. Ensure your device is ready.",
+      );
     } finally {
       setScanning(false);
     }
   };
 
-  const handleFallback = () => {
-    setBiometricType("none");
-    setBiometricPayload(null);
-    setStep(3);
-  };
-
   return (
     <Modal open={!!election} onClose={onClose}>
-      {step === 1 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold">Enter Your Matric Number</h2>
-
-          {error && <p className="text-red-600">{error}</p>}
-
-          <input
-            type="text"
-            placeholder="EES/21/22/0093"
-            value={matricNo}
-            onChange={handleMatricChange}
-            className="w-full p-2 border rounded"
-          />
-
-          <button
-            onClick={handleNextFromDetails}
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-          >
-            Continue
-          </button>
+      <div className="p-2">
+        {/* --- STEPPER INDICATOR --- */}
+        <div className="flex items-center justify-between mb-8 px-4">
+          {[1, 2, 3].map((s) => (
+            <React.Fragment key={s}>
+              <div
+                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all ${
+                  step >= s
+                    ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200"
+                    : "bg-white border-slate-200 text-slate-400"
+                }`}
+              >
+                {step > s ? (
+                  <ShieldCheck size={16} />
+                ) : (
+                  <span className="text-xs font-black">{s}</span>
+                )}
+              </div>
+              {s < 3 && (
+                <div
+                  className={`flex-1 h-0.5 mx-2 ${step > s ? "bg-indigo-600" : "bg-slate-100"}`}
+                />
+              )}
+            </React.Fragment>
+          ))}
         </div>
-      )}
 
-      {step === 2 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold">Biometric Verification</h2>
+        {/* --- STEP 1: IDENTITY --- */}
+        {step === 1 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="text-center space-y-2">
+              <div className="inline-flex p-3 bg-indigo-50 rounded-2xl text-indigo-600 mb-2">
+                <CreditCard size={28} />
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
+                Identify Yourself
+              </h2>
+              <p className="text-slate-500 text-sm font-medium">
+                Enter your official matriculation number to begin.
+              </p>
+            </div>
 
-          {error && <p className="text-red-600">{error}</p>}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                Matric Number
+              </label>
+              <MatricInput value={matricNo} onChange={setMatricNo} />
+              {error && (
+                <p className="text-red-500 text-[11px] font-bold italic text-center">
+                  {error}
+                </p>
+              )}
+            </div>
 
-          <p className="text-gray-600">
-            Verify your identity using your device biometrics.
-          </p>
+            <button
+              onClick={handleNextFromDetails}
+              className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-indigo-600 shadow-xl transition-all active:scale-95"
+            >
+              Verify Identity <ArrowRight size={16} />
+            </button>
+          </div>
+        )}
 
-          <button
-            onClick={handleBiometricScan}
-            disabled={scanning}
-            className={`w-full py-2 rounded text-white ${
-              scanning
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-green-600 hover:bg-green-700"
-            }`}
-          >
-            {scanning ? "Scanning..." : "Scan Fingerprint / Face ID"}
-          </button>
+        {/* --- STEP 2: BIOMETRICS --- */}
+        {step === 2 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-center">
+            <div className="space-y-2">
+              <div
+                className={`inline-flex p-6 rounded-[2.5rem] mb-2 transition-colors duration-500 ${scanning ? "bg-indigo-600 text-white animate-pulse" : "bg-slate-100 text-slate-400"}`}
+              >
+                {scanning ? (
+                  <Loader2 size={48} className="animate-spin" />
+                ) : (
+                  <Fingerprint size={48} />
+                )}
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">
+                Biometric Lock
+              </h2>
+              <p className="text-slate-500 text-sm font-medium max-w-60 mx-auto">
+                Secure your ballot using FaceID, TouchID, or your device
+                passcode.
+              </p>
+            </div>
 
-          <button
-            onClick={handleFallback}
-            className="w-full text-sm text-gray-500 underline"
-          >
-            My device does not support biometrics
-          </button>
-        </div>
-      )}
+            <div className="space-y-3">
+              <button
+                onClick={handleBiometricScan}
+                disabled={scanning}
+                className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50"
+              >
+                {scanning ? "Initializing Scanner..." : "Authenticate Now"}
+              </button>
 
-      {step === 3 && (
-        <PositionVoteCard
-          electionId={election.id}
-          user={{
-            matricNo,
-            deviceId,
-            biometricType,
-            biometricPayload,
-          }}
-          onClose={onClose}
-        />
-      )}
+              <button
+                onClick={() => {
+                  setBiometricType("none");
+                  setStep(3);
+                }}
+                className="w-full text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-indigo-600 transition-colors py-2"
+              >
+                Skip Biometrics (Reduced Security)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* --- STEP 3: BALLOT --- */}
+        {step === 3 && (
+          <div className="animate-in fade-in zoom-in-95 duration-500">
+            <PositionVoteCard
+              electionId={election?.id}
+              user={{ matricNo, deviceId, biometricType, biometricPayload }}
+              onClose={onClose}
+            />
+          </div>
+        )}
+      </div>
     </Modal>
   );
-    }
-                      
+}

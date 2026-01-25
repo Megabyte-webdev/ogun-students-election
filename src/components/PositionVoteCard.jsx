@@ -1,23 +1,32 @@
 import React, { useEffect, useState } from "react";
 import useAdmin from "../hooks/useAdmin";
 import CandidateCard from "./CandidateCard";
+import { Check, ShieldCheck, ArrowRight, ArrowLeft } from "lucide-react";
+import { extractErrorMessage } from "../utils/formatters";
 
 export default function PositionVoteCard({ electionId, user, onClose }) {
-  const { get, post } = useAdmin();
+  const { getOpen, post } = useAdmin();
   const [positions, setPositions] = useState([]);
-  const [votes, setVotes] = useState({});
+  const [votes, setVotes] = useState({}); // { positionId: candidateId }
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isReviewing, setIsReviewing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  // Track failed positions for retry
+  const [failedPositions, setFailedPositions] = useState([]);
 
   useEffect(() => {
     async function fetchPositions() {
       setLoading(true);
       try {
-        const res = await get(`positions?electionId=${electionId}`);
+        const res = await getOpen(`vote/positionsWithCandidate`);
         setPositions(res.positions || []);
       } catch (err) {
         console.error(err);
+        setError("Failed to load positions. Try refreshing.");
       } finally {
         setLoading(false);
       }
@@ -25,8 +34,25 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
     fetchPositions();
   }, [electionId]);
 
-  const handleVoteSelect = (positionId, candidateId) => {
-    setVotes({ ...votes, [positionId]: candidateId });
+  const currentPos = positions[currentIndex];
+
+  const handleSelect = (candId) => {
+    setVotes((prev) => ({ ...prev, [currentPos.id]: candId }));
+    setError("");
+    setSuccessMsg("");
+    setFailedPositions((prev) => prev.filter((id) => id !== currentPos.id));
+  };
+
+  const handleNext = () => {
+    if (!votes[currentPos.id]) {
+      setError("Selection required to proceed.");
+      return;
+    }
+    if (currentIndex < positions.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+    } else {
+      setIsReviewing(true);
+    }
   };
 
   const handleSubmit = async () => {
@@ -36,81 +62,221 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
 
     setSubmitting(true);
     setError("");
+    setSuccessMsg("");
+    const failedVotes = [];
 
-    try {
-      const results = await Promise.all(
-        Object.entries(votes).map(([positionId, candidateId]) =>
-          post("vote/submit-vote", {
-            matricNo: user.matricNo,
-            deviceId: user.deviceId,
-            biometricType: user.biometricType || "none",
-  biometricPayload:
-    user.biometricType && user.biometricType !== "none"
-      ? user.biometricPayload
-      : null,
-            positionId,
-            candidateId,
-          })
-        )
-      );
+    for (const [positionId, candidateId] of Object.entries(votes)) {
+      try {
+        const res = await post("vote/submit-vote", {
+          matricNo: user.matricNo,
+          deviceId: user.deviceId,
+          biometricType: user.biometricType || "none",
+          biometricPayload:
+            user.biometricType && user.biometricType !== "none"
+              ? user.biometricPayload
+              : null,
+          positionId,
+          candidateId,
+        });
 
-      const failed = results.find((r) => r.error);
-      if (failed) {
-        setError(failed.error);
-      } else {
-        alert("Votes submitted successfully!");
-        onClose();
+        if (res.error) {
+          failedVotes.push({ positionId, error: res.error });
+        }
+      } catch (err) {
+        failedVotes.push({
+          positionId,
+          error: extractErrorMessage(err) || "Network error",
+        });
       }
-    } catch (err) {
-      console.error(err);
-      setError("Failed to submit votes. Try again.");
-    } finally {
-      setSubmitting(false);
     }
+
+    if (failedVotes.length > 0) {
+      const messages = failedVotes
+        .map(
+          (f) =>
+            `${positions.find((p) => p.id === f.positionId)?.name}: ${f.error}`,
+        )
+        .join("\n");
+
+      setError(messages);
+      setFailedPositions(failedVotes.map((f) => f.positionId));
+      setSubmitting(false);
+      return;
+    }
+
+    setSuccessMsg("Votes submitted successfully!");
+    setFailedPositions([]);
+    setSubmitting(false);
+    onClose();
   };
 
   if (loading)
     return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin h-8 w-8 border-b-2 border-blue-600 rounded-full mr-3"></div>
-        Loading positions...
+      <div className="p-20 text-center animate-pulse font-mono text-blue-600">
+        AUTHENTICATING BALLOT...
       </div>
     );
 
+  // --- REVIEW SCREEN ---
+  if (isReviewing) {
+    return (
+      <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+            <ShieldCheck className="text-green-600" size={32} />
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 uppercase">
+            Review Your Ballot
+          </h2>
+          <p className="text-gray-500 text-sm">
+            Please confirm your selections before final encryption.
+          </p>
+        </div>
+
+        <div className="bg-gray-50 rounded-2xl border border-gray-200 divide-y divide-gray-200">
+          {positions.map((pos) => {
+            const selectedCand = pos.candidates.find(
+              (c) => c.id === votes[pos.id],
+            );
+            const isFailed = failedPositions.includes(pos.id);
+
+            return (
+              <div
+                key={pos.id}
+                className={`p-4 flex justify-between items-center ${
+                  isFailed ? "bg-red-50" : ""
+                }`}
+              >
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    {pos.name}
+                  </p>
+                  <p
+                    className={`font-bold ${
+                      isFailed ? "text-red-600" : "text-gray-800"
+                    }`}
+                  >
+                    {selectedCand?.name || "No Selection"}
+                  </p>
+                  {isFailed && (
+                    <p className="text-red-500 text-xs font-bold">
+                      Submission failed. Retry.
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setIsReviewing(false);
+                    setCurrentIndex(positions.indexOf(pos));
+                  }}
+                  className="text-blue-600 text-xs font-bold hover:underline"
+                >
+                  Change
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {error && (
+          <p className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-lg border border-red-100 whitespace-pre-wrap">
+            {error}
+          </p>
+        )}
+        {successMsg && (
+          <p className="p-3 bg-green-50 text-green-600 text-xs font-bold rounded-lg border border-green-100">
+            {successMsg}
+          </p>
+        )}
+
+        <div className="flex gap-3 pt-4">
+          <button
+            onClick={() => setIsReviewing(false)}
+            className="px-6 py-3 rounded-xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 transition-all"
+          >
+            Edit
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="grow bg-green-600 text-white py-4 rounded-xl font-black uppercase tracking-tight shadow-lg hover:bg-green-700 disabled:bg-gray-400 transition-all"
+          >
+            {submitting ? "Processing..." : "Confirm & Cast Ballot"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- VOTING STEPS ---
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold mb-4">Vote for Positions</h2>
-
-      {error && <p className="text-red-600">{error}</p>}
-
-      {positions.map((pos) => (
-        <div key={pos.id} className="border-b pb-4">
-          <h3 className="text-lg font-semibold">{pos.name}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-            {pos.candidates?.map((cand) => (
-              <CandidateCard
-                key={cand.id}
-                candidate={cand}
-                selected={votes[pos.id] === cand.id}
-                onSelect={() => handleVoteSelect(pos.id, cand.id)}
-              />
-            ))}
-          </div>
+      {/* Progress Bar */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-blue-600 transition-all duration-500"
+            style={{
+              width: `${((currentIndex + 1) / positions.length) * 100}%`,
+            }}
+          />
         </div>
-      ))}
+        <span className="text-[10px] font-black text-gray-400 uppercase">
+          {currentIndex + 1} / {positions.length}
+        </span>
+      </div>
 
-      <button
-        onClick={handleSubmit}
-        disabled={submitting}
-        className={`mt-6 px-6 py-2 rounded-lg text-white ${
-          submitting
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-green-600 hover:bg-green-700"
-        }`}
-      >
-        {submitting ? "Submitting..." : "Submit Votes"}
-      </button>
+      <div className="animate-in slide-in-from-right-8 duration-300">
+        <h2 className="text-3xl font-black text-gray-900 leading-none mb-2 uppercase tracking-tighter">
+          {currentPos.name}
+        </h2>
+        <p className="text-gray-500 font-medium text-sm mb-6">
+          Select one candidate for this position.
+        </p>
+
+        {error && (
+          <p className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-lg border border-red-100 mb-4 whitespace-pre-wrap">
+            {error}
+          </p>
+        )}
+
+        {successMsg && (
+          <p className="p-3 bg-green-50 text-green-600 text-xs font-bold rounded-lg border border-green-100 mb-4">
+            {successMsg}
+          </p>
+        )}
+
+        <div className="grid gap-3">
+          {currentPos.candidates?.map((cand) => (
+            <CandidateCard
+              key={cand.id}
+              candidate={cand}
+              selected={votes[currentPos.id] === cand.id}
+              onSelect={() => handleSelect(cand.id)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-3 pt-6 border-t border-gray-100">
+        {currentIndex > 0 && (
+          <button
+            onClick={() => setCurrentIndex((prev) => prev - 1)}
+            className="p-4 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
+          >
+            <ArrowLeft size={20} />
+          </button>
+        )}
+        <button
+          onClick={handleNext}
+          className="grow bg-blue-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
+        >
+          {currentIndex === positions.length - 1
+            ? "Review Selections"
+            : "Next Position"}{" "}
+          <ArrowRight size={18} />
+        </button>
+      </div>
     </div>
   );
-        }
-      
+}

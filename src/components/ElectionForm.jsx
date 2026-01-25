@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useAdmin from "../hooks/useAdmin";
 import { Calendar, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
 
-export default function ElectionForm({ onCreated }) {
+export default function ElectionForm({ onCreated, election = null }) {
+  const { createElection, updateElection } = useAdmin();
+
   const [form, setForm] = useState({
     title: "",
     startTime: "",
@@ -10,12 +12,29 @@ export default function ElectionForm({ onCreated }) {
     description: "",
     isActive: true,
   });
+
   const [status, setStatus] = useState({
     loading: false,
     error: "",
     success: "",
   });
-  const { createElection } = useAdmin();
+
+  // Populate form if editing
+  useEffect(() => {
+    if (election) {
+      setForm({
+        title: election.title || "",
+        startTime: election.startTime
+          ? new Date(election.startTime).toISOString().slice(0, 16)
+          : "",
+        endTime: election.endTime
+          ? new Date(election.endTime).toISOString().slice(0, 16)
+          : "",
+        description: election.description || "",
+        isActive: election.status === "active",
+      });
+    }
+  }, [election]);
 
   const handleChange = (key) => (e) =>
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
@@ -38,38 +57,54 @@ export default function ElectionForm({ onCreated }) {
     e.preventDefault();
     const err = validate();
     if (err) return setStatus({ loading: false, error: err, success: "" });
+
     setStatus({ loading: true, error: "", success: "" });
 
     try {
-      const res = await createElection({
-        ...form,
-        status: form.isActive ? "active" : "upcoming",
-      });
+      let res;
+      if (election) {
+        // Update existing election
+        res = await updateElection(election.id, {
+          ...form,
+          status: form.isActive ? "active" : "upcoming",
+        });
+      } else {
+        // Create new election
+        res = await createElection({
+          ...form,
+          status: form.isActive ? "active" : "upcoming",
+        });
+      }
+
       if (res.success) {
         setStatus({
           loading: false,
           error: "",
-          success: "Election created successfully!",
+          success: election
+            ? "Election updated successfully!"
+            : "Election created successfully!",
         });
-        onCreated(res.electionId);
-        setForm({
-          title: "",
-          startTime: "",
-          endTime: "",
-          description: "",
-          isActive: true,
-        });
+        onCreated(res.electionId || election?.id);
+        if (!election) {
+          setForm({
+            title: "",
+            startTime: "",
+            endTime: "",
+            description: "",
+            isActive: true,
+          });
+        }
       } else {
         setStatus({
           loading: false,
-          error: res.message || "Failed to create election",
+          error: res.message || "Failed to submit election",
           success: "",
         });
       }
     } catch {
       setStatus({
         loading: false,
-        error: "Error creating election",
+        error: "Error submitting election",
         success: "",
       });
     }
@@ -174,38 +209,50 @@ export default function ElectionForm({ onCreated }) {
         <button
           type="button"
           onClick={toggleActive}
-          className={`relative h-6 w-11 rounded-full transition-colors ${form.isActive ? "bg-green-600" : "bg-gray-300"}`}
+          className={`relative h-6 w-11 rounded-full transition-colors ${
+            form.isActive ? "bg-green-600" : "bg-gray-300"
+          }`}
         >
           <span
-            className={`absolute inline-block h-4 w-4  top-0 bottom-0 my-auto bg-white rounded-full transform transition-all ${form.isActive ? "left-6" : "left-1"}`}
+            className={`absolute inline-block h-4 w-4 top-0 bottom-0 my-auto bg-white rounded-full transform transition-all ${
+              form.isActive ? "left-6" : "left-1"
+            }`}
           />
         </button>
       </div>
 
       {/* Actions */}
       <div className="flex justify-end space-x-3">
-        <button
-          type="button"
-          onClick={() =>
-            setForm({
-              title: "",
-              startTime: "",
-              endTime: "",
-              description: "",
-              isActive: true,
-            })
-          }
-          className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
-          disabled={status.loading}
-        >
-          Clear
-        </button>
+        {!election && (
+          <button
+            type="button"
+            onClick={() =>
+              setForm({
+                title: "",
+                startTime: "",
+                endTime: "",
+                description: "",
+                isActive: true,
+              })
+            }
+            className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
+            disabled={status.loading}
+          >
+            Clear
+          </button>
+        )}
         <button
           type="submit"
           disabled={status.loading}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-700 disabled:opacity-50"
         >
-          {status.loading ? "Creating..." : "Create Election"}
+          {status.loading
+            ? election
+              ? "Updating..."
+              : "Creating..."
+            : election
+              ? "Update Election"
+              : "Create Election"}
         </button>
       </div>
     </form>

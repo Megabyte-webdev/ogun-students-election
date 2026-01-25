@@ -4,16 +4,16 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(
-    localStorage.getItem("token") ?? "adminsecret",
+    localStorage.getItem("admin-token") ?? "adminsecret",
   );
 
   const login = (jwt) => {
-    localStorage.setItem("token", jwt);
+    localStorage.setItem("admin-token", jwt);
     setToken(jwt);
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem("admin-token");
     setToken(null);
   };
 
