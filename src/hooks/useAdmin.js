@@ -1,7 +1,7 @@
 // hooks/useAdmin.js
 import { useAuth } from "../context/AuthContext";
 
-const API_BASE = "https://voting-system-mocha.vercel.app/api";
+const API_BASE = import.meta.env.API_URL;
 
 const useAdmin = () => {
   const { token } = useAuth(); // token from context
