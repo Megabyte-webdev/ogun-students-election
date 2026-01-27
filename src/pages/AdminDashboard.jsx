@@ -101,20 +101,20 @@ export default function AdminDashboard() {
   // Actions
   const handleActivate = async (type, id, activate = true) => {
     if (type === "elections") {
-      if (activate) await activateElection(id);
-      else await deactivateElection(id);
+      activate ? await activateElection(id) : await deactivateElection(id);
     }
-
     if (type === "positions") await activatePosition(id);
     if (type === "candidates") await activateCandidate(id);
-
-    fetchStats(); // Refresh the table
+    fetchStats();
   };
 
   const handleDelete = async (type, id) => {
+    if (!window.confirm("Are you sure you want to delete this item?")) return;
+
     if (type === "elections") await deleteElection(id);
     if (type === "positions") await deletePosition(id);
     if (type === "candidates") await deleteCandidate(id);
+
     fetchStats();
   };
 
@@ -128,7 +128,6 @@ export default function AdminDashboard() {
         accessor: "actions",
         cell: (row) => (
           <div className="flex items-center space-x-2">
-            {/* Edit Button */}
             <button
               onClick={() =>
                 setModal({ open: true, type: "elections", election: row })
@@ -137,8 +136,6 @@ export default function AdminDashboard() {
             >
               Edit
             </button>
-
-            {/* Activate / Deactivate Button */}
             {row.status === "active" ? (
               <button
                 onClick={() => handleActivate("elections", row.id, false)}
@@ -154,8 +151,6 @@ export default function AdminDashboard() {
                 Activate
               </button>
             )}
-
-            {/* Delete Button */}
             <button
               onClick={() => handleDelete("elections", row.id)}
               className="px-3 py-1 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
@@ -218,10 +213,7 @@ export default function AdminDashboard() {
       { header: "User ID", accessor: "userId" },
       { header: "Candidate", accessor: "candidate" },
       { header: "Position", accessor: "position" },
-      {
-        header: "Time of Vote",
-        accessor: "createdAt",
-      },
+      { header: "Time of Vote", accessor: "createdAt" },
     ],
     abuse: [
       { header: "Matric No", accessor: "matricNo" },
@@ -264,9 +256,9 @@ export default function AdminDashboard() {
     }
 
     if (activeTab === "votes")
-      return <DataTable columns={columnsMap["votes"]} data={data} />;
+      return <DataTable columns={columnsMap.votes} data={data} />;
     if (activeTab === "abuse")
-      return <DataTable columns={columnsMap["abuse"]} data={data} />;
+      return <DataTable columns={columnsMap.abuse} data={data} />;
 
     return null;
   };
@@ -309,7 +301,7 @@ export default function AdminDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-shrink-0 flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`shrink-0 flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? `bg-${tab.color}-100 text-${tab.color}-600`
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"

@@ -4,82 +4,85 @@ import { useAuth } from "../context/AuthContext";
 const API_BASE = import.meta.env.VITE_API_URL;
 
 const useAdmin = () => {
-  const { token } = useAuth(); // token from context
+  const { token } = useAuth(); // admin auth token
 
-  async function post(endpoint, body) {
+  const headers = {
+    "Content-Type": "application/json",
+    "x-admin-token": token,
+  };
+
+  const get = async (endpoint) => {
+    const res = await fetch(`${API_BASE}/admin/${endpoint}`, { headers });
+    return res.json();
+  };
+
+  const post = async (endpoint, body) => {
     const res = await fetch(`${API_BASE}/admin/${endpoint}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-token": token,
-      },
+      headers,
       body: JSON.stringify(body),
     });
     return res.json();
-  }
+  };
 
-  async function postVote(endpoint, body) {
-    const res = await fetch(`${API_BASE}/${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-    return res.json();
-  }
-
-  async function get(endpoint) {
+  const patch = async (endpoint, body = {}) => {
     const res = await fetch(`${API_BASE}/admin/${endpoint}`, {
-      headers: {
-        "x-admin-token": token,
-      },
-    });
-    return res.json();
-  }
-
-  async function getOpen(endpoint) {
-    const res = await fetch(`${API_BASE}/${endpoint}`);
-    return res.json();
-  }
-
-  const activateElection = async (id) => {
-    const res = await fetch(`${API_BASE}/admin/${id}/activate`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", "x-admin-token": token },
-    });
-    return res.json();
-  };
-  const deactivateElection = async (id) => {
-    const res = await fetch(`${API_BASE}/admin/${id}/deactivate`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", "x-admin-token": token },
-    });
-    return res.json();
-  };
-  const updateElection = async (id, data) => {
-    const res = await fetch(`${API_BASE}/admin/elections/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-      headers: { "Content-Type": "application/json", "x-admin-token": token },
+      headers,
+      body: Object.keys(body).length ? JSON.stringify(body) : undefined,
     });
     return res.json();
   };
 
-  // Functions exposed to components
+  const remove = async (endpoint) => {
+    const res = await fetch(`${API_BASE}/admin/${endpoint}`, {
+      method: "DELETE",
+      headers,
+    });
+    return res.json();
+  };
+
+  // Election endpoints
+  const createElection = (data) => post("elections", data);
+  const updateElection = (id, data) => patch(`elections/${id}`, data);
+  const activateElection = (id) => patch(`${id}/activate`);
+  const deactivateElection = (id) => patch(`${id}/deactivate`);
+  const deleteElection = (id) => remove(`elections/${id}`);
+  const closeElection = (id) => post(`elections/${id}/close`);
+
+  // Position endpoints
+  const createPosition = (data) => post("positions", data);
+  const activatePosition = (id) => patch(`positions/${id}/activate`);
+  const deletePosition = (id) => remove(`positions/${id}`);
+
+  // Candidate endpoints
+  const createCandidate = (data) => post("candidates", data);
+  const activateCandidate = (id) => patch(`candidates/${id}/activate`);
+  const deleteCandidate = (id) => remove(`candidates/${id}`);
+
+  // Audit / stats endpoints
+  const listVotes = () => get("votes");
+  const listAbuseLogs = () => get("abuse-logs");
+
   return {
-    createElection: (data) => post("elections", data),
+    createElection,
     updateElection,
-    createPosition: (data) => post("positions", data),
-    createCandidate: (data) => post("candidates", data),
-    closeElection: (id) => post(`elections/${id}/close`),
-    listVotes: () => get("votes"),
-    listAbuseLogs: () => get("abuse-logs"),
     activateElection,
     deactivateElection,
+    deleteElection,
+    closeElection,
+
+    createPosition,
+    activatePosition,
+    deletePosition,
+
+    createCandidate,
+    activateCandidate,
+    deleteCandidate,
+
+    listVotes,
+    listAbuseLogs,
     get,
-    post: postVote,
-    getOpen,
   };
 };
 
