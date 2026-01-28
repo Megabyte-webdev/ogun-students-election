@@ -65,7 +65,7 @@ export default function AdminLayout({ children }) {
       </header>
 
       {/* --- MAIN CONTENT --- */}
-      <div className="max-w-7xl mx-auto flex">
+      <div className="w-full max-w-7xl mx-auto flex">
         <main className="flex-1 p-8 md:p-12">
           {/* Breadcrumb Info */}
           <div className="flex items-center gap-2 mb-10">
