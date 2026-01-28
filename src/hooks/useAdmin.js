@@ -4,15 +4,15 @@ import { useAuth } from "../context/AuthContext";
 const API_BASE = import.meta.env.VITE_API_URL;
 
 const useAdmin = () => {
-  const { token } = useAuth();
+  const { auth } = useAuth();
 
   const jsonHeaders = {
     "Content-Type": "application/json",
-    "x-admin-token": token,
+    Authorization: `Bearer ${auth?.token}`,
   };
 
   const authHeaders = {
-    "x-admin-token": token,
+    Authorization: `Bearer ${auth?.token}`,
   };
 
   const get = async (endpoint) => {
@@ -81,7 +81,7 @@ const useAdmin = () => {
     fetch(`${API_BASE}/admin/candidates/${id}`, {
       method: "PATCH",
       headers: {
-        "x-admin-token": token,
+        Authorization: `Bearer ${auth?.token}`,
       },
       body: formData,
     }).then((res) => res.json());

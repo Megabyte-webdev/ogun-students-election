@@ -3,8 +3,8 @@ import HomePage from "./pages/HomePage";
 import AdminDashboard from "./pages/AdminDashboard";
 import Vote from "./pages/Vote";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import Signup from "./pages/Signup";
 import VotingDashboard from "./pages/VotingDashboard";
+import AdminForm from "./pages/AdminForm";
 
 function Protected({ children }) {
   const { token } = useAuth();
@@ -17,7 +17,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/register" element={<Signup />} />
+          <Route path="/secure/login" element={<AdminForm />} />
           <Route path="/vote" element={<VotingDashboard />} />
 
           <Route
