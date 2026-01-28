@@ -11,25 +11,25 @@ function EmptyState() {
         No active elections
       </h2>
       <p className="text-slate-500 mt-2">
-        Please check back later for upcoming elections.
+        Please check back later for upcoming election.
       </p>
     </div>
   );
 }
 
 export default function VotingDashboard() {
-  const [elections, setElections] = useState([]);
+  const [election, setElection] = useState([]);
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState("");
 
-  const { get } = useAdmin();
+  const { getOpen } = useAdmin();
 
   useEffect(() => {
     async function fetchElections() {
       setLoading(true);
       try {
-        const res = await get("elections");
-        setElections(res.elections || []);
+        const res = await getOpen("vote/active-election");
+        setElection(res.election || []);
       } catch (err) {
         console.error("Failed to fetch elections", err);
       } finally {
@@ -39,14 +39,12 @@ export default function VotingDashboard() {
     fetchElections();
   }, []);
 
-  const activeElection = elections.find((e) => e.status === "active");
-
   useEffect(() => {
-    if (!activeElection) return;
+    if (!election) return;
 
     function updateCountdown() {
       const now = new Date();
-      const end = new Date(activeElection.endTime);
+      const end = new Date(election.endTime);
       const diff = end - now;
 
       if (diff <= 0) {
@@ -70,7 +68,7 @@ export default function VotingDashboard() {
     const interval = setInterval(updateCountdown, 1000);
 
     return () => clearInterval(interval);
-  }, [activeElection]);
+  }, [election]);
 
   if (loading)
     return (
@@ -99,7 +97,7 @@ export default function VotingDashboard() {
         </header>
 
         {/* --- HERO (ACTIVE ELECTION) --- */}
-        {activeElection ? (
+        {election ? (
           <div className="group relative">
             {/* Background Decor */}
             <div className="absolute -inset-1 bg-linear-to-r from-indigo-500 to-purple-600 rounded-[2.5rem] blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
@@ -112,7 +110,7 @@ export default function VotingDashboard() {
                 </div>
 
                 <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-[0.9]">
-                  {activeElection.title}
+                  {election.title}
                 </h2>
 
                 <div className="flex items-center gap-6 py-2">
@@ -128,7 +126,7 @@ export default function VotingDashboard() {
                 </div>
 
                 <div className="pt-4">
-                  <ElectionCard election={activeElection} variant="hero" />
+                  <ElectionCard election={election} variant="hero" />
                 </div>
               </div>
 

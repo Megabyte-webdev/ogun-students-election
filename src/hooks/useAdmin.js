@@ -110,6 +110,7 @@ const useAdmin = () => {
     listAbuseLogs,
     get,
     getOpen,
+    post,
   };
 };
 

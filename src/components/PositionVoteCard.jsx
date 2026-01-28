@@ -107,7 +107,6 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
     setSuccessMsg("Votes submitted successfully!");
     setFailedPositions([]);
     setSubmitting(false);
-    onClose();
   };
 
   if (loading)
