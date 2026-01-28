@@ -3,6 +3,7 @@ import useAdmin from "../hooks/useAdmin";
 import CandidateCard from "./CandidateCard";
 import { Check, ShieldCheck, ArrowRight, ArrowLeft } from "lucide-react";
 import { extractErrorMessage } from "../utils/formatters";
+import { axiosClient } from "../services/axios-client";
 
 export default function PositionVoteCard({ electionId, user, onClose }) {
   const { getOpen, post } = useAdmin();
@@ -57,17 +58,19 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
 
   const handleSubmit = async () => {
     if (Object.keys(votes).length !== positions.length) {
-      return setError("Please vote for all positions before submitting.");
+      setError("Please vote for all positions before submitting.");
+      return;
     }
 
     setSubmitting(true);
     setError("");
     setSuccessMsg("");
+
     const failedVotes = [];
 
     for (const [positionId, candidateId] of Object.entries(votes)) {
       try {
-        const res = await post("vote/submit-vote", {
+        const res = await axiosClient.post("vote/submit-vote", {
           matricNo: user.matricNo,
           deviceId: user.deviceId,
           biometricType: user.biometricType || "none",
@@ -79,31 +82,35 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
           candidateId,
         });
 
-        if (res.error) {
-          failedVotes.push({ positionId, error: res.error });
+        // STRICT SUCCESS CHECK
+        if (!res || res.success !== true) {
+          throw new Error(res?.message || res?.error || "Vote rejected");
         }
       } catch (err) {
         failedVotes.push({
           positionId,
-          error: extractErrorMessage(err) || "Network error",
+          error: extractErrorMessage(err),
         });
       }
     }
 
     if (failedVotes.length > 0) {
-      const messages = failedVotes
-        .map(
-          (f) =>
-            `${positions.find((p) => p.id === f.positionId)?.name}: ${f.error}`,
-        )
-        .join("\n");
-
-      setError(messages);
       setFailedPositions(failedVotes.map((f) => f.positionId));
+
+      setError(
+        failedVotes
+          .map((f) => {
+            const pos = positions.find((p) => p.id === f.positionId);
+            return `${pos?.name}: ${f.error}`;
+          })
+          .join("\n"),
+      );
+
       setSubmitting(false);
       return;
     }
 
+    //  SUCCESS ONLY HERE
     setSuccessMsg("Votes submitted successfully!");
     setFailedPositions([]);
     setSubmitting(false);

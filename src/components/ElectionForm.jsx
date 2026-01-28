@@ -1,6 +1,19 @@
 import { useState, useEffect } from "react";
 import useAdmin from "../hooks/useAdmin";
-import { Calendar, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+
+function toDatetimeLocal(date) {
+  const d = new Date(date); // parse ISO or Date
+  const pad = (n) => n.toString().padStart(2, "0");
+
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1); // month is 0-indexed
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
 
 export default function ElectionForm({ onCreated, election = null }) {
   const { createElection, updateElection } = useAdmin();
@@ -25,11 +38,9 @@ export default function ElectionForm({ onCreated, election = null }) {
       setForm({
         title: election.title || "",
         startTime: election.startTime
-          ? new Date(election.startTime).toISOString().slice(0, 16)
+          ? toDatetimeLocal(election.startTime)
           : "",
-        endTime: election.endTime
-          ? new Date(election.endTime).toISOString().slice(0, 16)
-          : "",
+        endTime: election.endTime ? toDatetimeLocal(election.endTime) : "",
         description: election.description || "",
         isActive: election.status === "active",
       });
@@ -47,9 +58,14 @@ export default function ElectionForm({ onCreated, election = null }) {
     if (!title.trim()) return "Election title is required";
     if (!startTime) return "Start time is required";
     if (!endTime) return "End time is required";
-    if (new Date(startTime) >= new Date(endTime))
-      return "End must be after start";
-    if (new Date(startTime) < new Date()) return "Start cannot be in the past";
+
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
+    const now = new Date();
+
+    if (startDate >= endDate) return "End must be after start";
+    if (startDate < now) return "Start cannot be in the past";
+
     return "";
   };
 
@@ -61,19 +77,19 @@ export default function ElectionForm({ onCreated, election = null }) {
     setStatus({ loading: true, error: "", success: "" });
 
     try {
+      // ⚡ Send datetime-local values as-is
+      const payload = {
+        ...form,
+        startTime: form.startTime,
+        endTime: form.endTime,
+        status: form.isActive ? "active" : "upcoming",
+      };
+
       let res;
       if (election) {
-        // Update existing election
-        res = await updateElection(election.id, {
-          ...form,
-          status: form.isActive ? "active" : "upcoming",
-        });
+        res = await updateElection(election.id, payload);
       } else {
-        // Create new election
-        res = await createElection({
-          ...form,
-          status: form.isActive ? "active" : "upcoming",
-        });
+        res = await createElection(payload);
       }
 
       if (res.success) {
@@ -85,6 +101,7 @@ export default function ElectionForm({ onCreated, election = null }) {
             : "Election created successfully!",
         });
         onCreated(res.electionId || election?.id);
+
         if (!election) {
           setForm({
             title: "",
@@ -110,17 +127,16 @@ export default function ElectionForm({ onCreated, election = null }) {
     }
   };
 
-  const formatDate = (d) => new Date(d).toISOString().slice(0, 16);
-  const minStart = formatDate(new Date());
+  const minStart = new Date().toISOString().slice(0, 16);
   const defaultEnd = form.startTime
-    ? formatDate(
-        new Date(new Date(form.startTime).getTime() + 24 * 60 * 60 * 1000),
-      )
+    ? new Date(new Date(form.startTime).getTime() + 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 16)
     : "";
 
   const Message = ({ type, children }) => (
     <div
-      className={`mb-4 p-4 rounded-lg flex items-start ${
+      className={`sticky top-0 mb-4 p-4 rounded-lg flex items-start ${
         type === "error"
           ? "bg-red-50 border border-red-200 text-red-800"
           : "bg-green-50 border border-green-200 text-green-800"
@@ -143,7 +159,6 @@ export default function ElectionForm({ onCreated, election = null }) {
       {status.success && <Message type="success">{status.success}</Message>}
       {status.error && <Message type="error">{status.error}</Message>}
 
-      {/* Election Details */}
       <div className="space-y-4">
         <label className="block font-medium">Election Title *</label>
         <input
@@ -154,7 +169,6 @@ export default function ElectionForm({ onCreated, election = null }) {
           className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
           required
         />
-
         <label className="block font-medium">Description</label>
         <textarea
           value={form.description}
@@ -165,7 +179,6 @@ export default function ElectionForm({ onCreated, election = null }) {
         />
       </div>
 
-      {/* Schedule */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block font-medium">Start Date & Time *</label>
@@ -198,7 +211,6 @@ export default function ElectionForm({ onCreated, election = null }) {
         </div>
       </div>
 
-      {/* Active Toggle */}
       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
         <div>
           <p className="font-medium">Active Status</p>
@@ -209,19 +221,14 @@ export default function ElectionForm({ onCreated, election = null }) {
         <button
           type="button"
           onClick={toggleActive}
-          className={`relative h-6 w-11 rounded-full transition-colors ${
-            form.isActive ? "bg-green-600" : "bg-gray-300"
-          }`}
+          className={`relative h-6 w-11 rounded-full transition-colors ${form.isActive ? "bg-green-600" : "bg-gray-300"}`}
         >
           <span
-            className={`absolute inline-block h-4 w-4 top-0 bottom-0 my-auto bg-white rounded-full transform transition-all ${
-              form.isActive ? "left-6" : "left-1"
-            }`}
+            className={`absolute inline-block h-4 w-4 top-0 bottom-0 my-auto bg-white rounded-full transform transition-all ${form.isActive ? "left-6" : "left-1"}`}
           />
         </button>
       </div>
 
-      {/* Actions */}
       <div className="flex justify-end space-x-3">
         {!election && (
           <button
