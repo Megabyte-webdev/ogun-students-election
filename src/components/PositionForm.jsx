@@ -32,7 +32,13 @@ export default function PositionForm({ onCreated }) {
   // Fetch elections for dropdown
   useEffect(() => {
     get("elections").then((res) => {
-      if (res.elections) setElections(res.elections);
+      if (res.elections && res.elections.length > 0) {
+        setElections(res.elections);
+        setForm((prev) => ({
+          ...prev,
+          electionId: res.elections[0].id, // auto-select first election
+        }));
+      }
     });
   }, []);
 

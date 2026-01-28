@@ -68,3 +68,17 @@ export async function runWebAuthnScan() {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
+
+export const getCurrentSession = () => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-indexed (0 is Jan, 8 is Sept)
+
+  // Assuming a new session starts around September (Month 8)
+  // If it's before September, the session started last year.
+  if (currentMonth < 8) {
+    return `Academic Session ${currentYear - 1}/${currentYear}`;
+  } else {
+    return `Academic Session ${currentYear}/${currentYear + 1}`;
+  }
+};

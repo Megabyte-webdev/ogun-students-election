@@ -13,7 +13,6 @@ import {
   ShieldAlert,
   RefreshCw,
   Plus,
-  CheckCircle,
   Trash2,
 } from "lucide-react";
 import Modal from "../components/Modal.jsx";
@@ -35,67 +34,93 @@ export default function AdminDashboard() {
     deleteElection,
     activatePosition,
     deletePosition,
-    activateCandidate,
     deleteCandidate,
     get,
   } = useAdmin();
 
   const [activeTab, setActiveTab] = useState("elections");
   const [stats, setStats] = useState({});
-  const [data, setData] = useState([]);
+  const [tabData, setTabData] = useState({
+    elections: [],
+    positions: [],
+    candidates: [],
+    votes: [],
+    abuse: [],
+  });
   const [isLoading, setIsLoading] = useState(false);
-  const [modal, setModal] = useState({ open: false, type: null });
+  const [modal, setModal] = useState({ open: false, type: null, item: null });
 
-  // Fetch stats and data
-  const fetchStats = async () => {
+  // Fetch only the active tab's data
+  const fetchTabData = async (tab) => {
     setIsLoading(true);
     try {
-      const [votesRes, electionsRes, positionsRes, candidatesRes, abuseRes] =
-        await Promise.all([
-          listVotes(),
-          get("elections"),
-          get("positions"),
-          get("candidates"),
-          listAbuseLogs(),
-        ]);
-
-      setStats({
-        totalVotes: votesRes.votes?.length || 0,
-        activeElections: electionsRes.elections?.length || 0,
-        totalPositions: positionsRes.positions?.length || 0,
-        totalCandidates: candidatesRes.candidates?.length || 0,
-        reportedAbuse: abuseRes.logs?.length || 0,
-      });
-
-      // Set data for active tab
-      switch (activeTab) {
-        case "votes":
-          setData(votesRes.votes || []);
+      switch (tab) {
+        case "elections": {
+          const electionsRes = await get("elections");
+          setTabData((prev) => ({
+            ...prev,
+            elections: electionsRes.elections || [],
+          }));
+          setStats((prev) => ({
+            ...prev,
+            activeElections: electionsRes.elections?.length || 0,
+          }));
           break;
-        case "abuse":
-          setData(abuseRes.logs || []);
+        }
+        case "positions": {
+          const positionsRes = await get("positions");
+          setTabData((prev) => ({
+            ...prev,
+            positions: positionsRes.positions || [],
+          }));
+          setStats((prev) => ({
+            ...prev,
+            totalPositions: positionsRes.positions?.length || 0,
+          }));
           break;
-        case "elections":
-          setData(electionsRes.elections || []);
+        }
+        case "candidates": {
+          const candidatesRes = await get("candidates");
+          setTabData((prev) => ({
+            ...prev,
+            candidates: candidatesRes.candidates || [],
+          }));
+          setStats((prev) => ({
+            ...prev,
+            totalCandidates: candidatesRes.candidates?.length || 0,
+          }));
           break;
-        case "positions":
-          setData(positionsRes.positions || []);
+        }
+        case "votes": {
+          const votesRes = await listVotes();
+          setTabData((prev) => ({ ...prev, votes: votesRes.votes || [] }));
+          setStats((prev) => ({
+            ...prev,
+            totalVotes: votesRes.votes?.length || 0,
+          }));
           break;
-        case "candidates":
-          setData(candidatesRes.candidates || []);
+        }
+        case "abuse": {
+          const abuseRes = await listAbuseLogs();
+          setTabData((prev) => ({ ...prev, abuse: abuseRes.logs || [] }));
+          setStats((prev) => ({
+            ...prev,
+            reportedAbuse: abuseRes.logs?.length || 0,
+          }));
           break;
+        }
         default:
-          setData([]);
+          break;
       }
     } catch (err) {
-      console.error("Failed to fetch stats:", err);
+      console.error("Failed to fetch tab data:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStats();
+    fetchTabData(activeTab);
   }, [activeTab]);
 
   // Actions
@@ -104,8 +129,7 @@ export default function AdminDashboard() {
       activate ? await activateElection(id) : await deactivateElection(id);
     }
     if (type === "positions") await activatePosition(id);
-    if (type === "candidates") await activateCandidate(id);
-    fetchStats();
+    fetchTabData(type);
   };
 
   const handleDelete = async (type, id) => {
@@ -115,10 +139,10 @@ export default function AdminDashboard() {
     if (type === "positions") await deletePosition(id);
     if (type === "candidates") await deleteCandidate(id);
 
-    fetchStats();
+    fetchTabData(type);
   };
 
-  // Columns for tables
+  // Columns mapping
   const columnsMap = {
     elections: [
       { header: "Title", accessor: "title" },
@@ -130,7 +154,7 @@ export default function AdminDashboard() {
           <div className="flex items-center space-x-2">
             <button
               onClick={() =>
-                setModal({ open: true, type: "elections", election: row })
+                setModal({ open: true, type: "elections", item: row })
               }
               className="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600"
             >
@@ -170,10 +194,12 @@ export default function AdminDashboard() {
         cell: (row) => (
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => handleActivate("positions", row.id)}
-              className="text-green-600 hover:text-green-800"
+              onClick={() =>
+                setModal({ open: true, type: "positions", item: row })
+              }
+              className="text-yellow-600 hover:text-yellow-800"
             >
-              <CheckCircle />
+              Edit
             </button>
             <button
               onClick={() => handleDelete("positions", row.id)}
@@ -186,6 +212,20 @@ export default function AdminDashboard() {
       },
     ],
     candidates: [
+      {
+        header: "Photo",
+        accessor: "photoUrl",
+        cell: (row) => (
+          <img
+            src={row.photo}
+            alt={row.name}
+            className="w-12 h-12 rounded-full object-cover border"
+            onError={(e) => {
+              e.currentTarget.src = "/avatar-placeholder.png";
+            }}
+          />
+        ),
+      },
       { header: "Name", accessor: "name" },
       { header: "Position", accessor: "positionName" },
       {
@@ -194,10 +234,12 @@ export default function AdminDashboard() {
         cell: (row) => (
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => handleActivate("candidates", row.id)}
-              className="text-green-600 hover:text-green-800"
+              onClick={() =>
+                setModal({ open: true, type: "candidates", item: row })
+              }
+              className="text-yellow-600 hover:text-yellow-800"
             >
-              <CheckCircle />
+              Edit
             </button>
             <button
               onClick={() => handleDelete("candidates", row.id)}
@@ -235,20 +277,24 @@ export default function AdminDashboard() {
       );
 
     if (["elections", "positions", "candidates"].includes(activeTab)) {
+      const disableAddElection =
+        activeTab === "elections" && tabData.elections.length > 0;
+
       return (
         <div>
           <div className="flex justify-between mb-4">
             <h2 className="text-xl font-semibold capitalize">{activeTab}</h2>
             <button
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               onClick={() => setModal({ open: true, type: activeTab })}
+              disabled={disableAddElection}
             >
               <Plus className="w-4 h-4 mr-2" /> Add {activeTab.slice(0, -1)}
             </button>
           </div>
           <DataTable
             columns={columnsMap[activeTab]}
-            data={data}
+            data={tabData[activeTab]}
             emptyMessage={`No ${activeTab} found`}
           />
         </div>
@@ -256,9 +302,9 @@ export default function AdminDashboard() {
     }
 
     if (activeTab === "votes")
-      return <DataTable columns={columnsMap.votes} data={data} />;
+      return <DataTable columns={columnsMap.votes} data={tabData.votes} />;
     if (activeTab === "abuse")
-      return <DataTable columns={columnsMap.abuse} data={data} />;
+      return <DataTable columns={columnsMap.abuse} data={tabData.abuse} />;
 
     return null;
   };
@@ -286,7 +332,7 @@ export default function AdminDashboard() {
             );
           })}
           <button
-            onClick={fetchStats}
+            onClick={() => fetchTabData(activeTab)}
             className="mt-auto flex items-center p-3 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium text-gray-700"
           >
             <RefreshCw className="w-4 h-4 mr-2" /> Refresh Stats
@@ -374,29 +420,31 @@ export default function AdminDashboard() {
       {/* Modal */}
       <Modal
         open={modal.open}
-        onClose={() => setModal({ open: false, type: null })}
+        onClose={() => setModal({ open: false, type: null, item: null })}
       >
         {modal.type === "elections" && (
           <ElectionForm
-            election={modal?.election}
+            election={modal?.item}
             onCreated={() => {
-              fetchStats();
+              fetchTabData("elections");
               setModal({ open: false });
             }}
           />
         )}
         {modal.type === "positions" && (
           <PositionForm
+            position={modal?.item}
             onCreated={() => {
-              fetchStats();
+              fetchTabData("positions");
               setModal({ open: false });
             }}
           />
         )}
         {modal.type === "candidates" && (
           <CandidateForm
+            candidate={modal?.item}
             onCreated={() => {
-              fetchStats();
+              fetchTabData("candidates");
               setModal({ open: false });
             }}
           />

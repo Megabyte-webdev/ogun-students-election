@@ -4,23 +4,44 @@ import { useAuth } from "../context/AuthContext";
 const API_BASE = import.meta.env.VITE_API_URL;
 
 const useAdmin = () => {
-  const { token } = useAuth(); // admin auth token
+  const { token } = useAuth();
 
-  const headers = {
+  const jsonHeaders = {
     "Content-Type": "application/json",
     "x-admin-token": token,
   };
 
+  const authHeaders = {
+    "x-admin-token": token,
+  };
+
   const get = async (endpoint) => {
-    const res = await fetch(`${API_BASE}/admin/${endpoint}`, { headers });
+    const res = await fetch(`${API_BASE}/admin/${endpoint}`, {
+      headers: jsonHeaders,
+    });
+    return res.json();
+  };
+  const getOpen = async (endpoint) => {
+    const res = await fetch(`${API_BASE}/${endpoint}`, {
+      headers: jsonHeaders,
+    });
     return res.json();
   };
 
   const post = async (endpoint, body) => {
     const res = await fetch(`${API_BASE}/admin/${endpoint}`, {
       method: "POST",
-      headers,
+      headers: jsonHeaders,
       body: JSON.stringify(body),
+    });
+    return res.json();
+  };
+
+  const postForm = async (endpoint, formData) => {
+    const res = await fetch(`${API_BASE}/admin/${endpoint}`, {
+      method: "POST",
+      headers: authHeaders, // ❗ no Content-Type
+      body: formData,
     });
     return res.json();
   };
@@ -28,7 +49,7 @@ const useAdmin = () => {
   const patch = async (endpoint, body = {}) => {
     const res = await fetch(`${API_BASE}/admin/${endpoint}`, {
       method: "PATCH",
-      headers,
+      headers: jsonHeaders,
       body: Object.keys(body).length ? JSON.stringify(body) : undefined,
     });
     return res.json();
@@ -37,30 +58,36 @@ const useAdmin = () => {
   const remove = async (endpoint) => {
     const res = await fetch(`${API_BASE}/admin/${endpoint}`, {
       method: "DELETE",
-      headers,
+      headers: jsonHeaders,
     });
     return res.json();
   };
 
-  // Election endpoints
+  // Elections
   const createElection = (data) => post("elections", data);
   const updateElection = (id, data) => patch(`elections/${id}`, data);
   const activateElection = (id) => patch(`${id}/activate`);
   const deactivateElection = (id) => patch(`${id}/deactivate`);
   const deleteElection = (id) => remove(`elections/${id}`);
-  const closeElection = (id) => post(`elections/${id}/close`);
 
-  // Position endpoints
+  // Positions
   const createPosition = (data) => post("positions", data);
   const activatePosition = (id) => patch(`positions/${id}/activate`);
   const deletePosition = (id) => remove(`positions/${id}`);
 
-  // Candidate endpoints
-  const createCandidate = (data) => post("candidates", data);
-  const activateCandidate = (id) => patch(`candidates/${id}/activate`);
+  // Candidates (MULTI-FORM)
+  const createCandidate = (formData) => postForm("candidates", formData);
+  const updateCandidate = (id, formData) =>
+    fetch(`${API_BASE}/admin/candidates/${id}`, {
+      method: "PATCH",
+      headers: {
+        "x-admin-token": token,
+      },
+      body: formData,
+    }).then((res) => res.json());
   const deleteCandidate = (id) => remove(`candidates/${id}`);
 
-  // Audit / stats endpoints
+  // Logs
   const listVotes = () => get("votes");
   const listAbuseLogs = () => get("abuse-logs");
 
@@ -70,19 +97,19 @@ const useAdmin = () => {
     activateElection,
     deactivateElection,
     deleteElection,
-    closeElection,
 
     createPosition,
     activatePosition,
     deletePosition,
 
     createCandidate,
-    activateCandidate,
+    updateCandidate,
     deleteCandidate,
 
     listVotes,
     listAbuseLogs,
     get,
+    getOpen,
   };
 };
 
