@@ -17,7 +17,7 @@ export default function AdminLayout({ children }) {
     <div className="min-h-screen bg-slate-100 text-slate-900 font-sans">
       {/* --- CLEAN WHITE NAVIGATION BAR --- */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 shadow-sm">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+        <div className="w-full max-w-7xl mx-auto flex justify-between items-center">
           {/* Logo Section */}
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-200">
