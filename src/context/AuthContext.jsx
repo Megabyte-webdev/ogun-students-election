@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext();
@@ -23,8 +24,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
       value={{
-        user: auth?.user,
-        token: auth?.token,
+        auth,
         isAuthenticated: !!auth?.token,
         login,
         logout,

@@ -7,8 +7,9 @@ import VotingDashboard from "./pages/VotingDashboard";
 import AdminForm from "./pages/AdminForm";
 
 function Protected({ children }) {
-  const { token } = useAuth();
-  return token ? children : <Login />;
+  const { isAuthenticated } = useAuth();
+
+  return isAuthenticated ? children : <AdminForm />;
 }
 
 export default function App() {
