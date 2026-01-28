@@ -14,7 +14,7 @@ export default function AdminLayout({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans">
+    <div className="min-h-screen w-full bg-slate-100 text-slate-900 font-sans">
       {/* --- CLEAN WHITE NAVIGATION BAR --- */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 shadow-sm">
         <div className="w-full max-w-7xl mx-auto flex justify-between items-center">
