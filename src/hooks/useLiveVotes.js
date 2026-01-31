@@ -6,7 +6,7 @@ export default function useLiveVotes() {
 
   useEffect(() => {
     // Replace with your actual backend URL
-    const socket = io("http://localhost:5000");
+    const socket = io(import.meta.env.VITE_BASE_URL);
 
     // Listen for the specific init event from your logs
     socket.on("vote:update:init", (data) => {
