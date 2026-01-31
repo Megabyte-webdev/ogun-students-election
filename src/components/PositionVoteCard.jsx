@@ -56,66 +56,74 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
   };
 
   const handleSubmit = async () => {
-    if (Object.keys(votes).length !== positions.length) {
-      setError("Please vote for all positions before submitting.");
-      return;
-    }
+  if (Object.keys(votes).length !== positions.length) {
+    setError("Please vote for all positions before submitting.");
+    return;
+  }
 
-    setSubmitting(true);
-    setError("");
-    setSuccessMsg("");
-    const failedVotes = [];
-    const succeededVotes = [];
+  setSubmitting(true);
+  setError("");
+  setSuccessMsg("");
+  const failedVotes = [];
+  const succeededVotes = [];
 
-    for (const [positionId, candidateId] of Object.entries(votes)) {
-      try {
-        const res = await axiosClient.post("vote/submit-vote", {
-          matricNo: user.matricNo,
-          deviceId: user.deviceId,
-          biometricType: user.biometricType || "none",
-          biometricPayload:
-            user.biometricType && user.biometricType !== "none"
-              ? user.biometricPayload
-              : null,
-          positionId,
-          candidateId,
-        });
+  for (const [positionId, candidateId] of Object.entries(votes)) {
+    try {
+      const { data } = await axiosClient.post("vote/submit-vote", {
+        matricNo: user.matricNo,
+        deviceId: user.deviceId,
+        biometricType: user.biometricType || "none",
+        biometricPayload:
+          user.biometricType && user.biometricType !== "none"
+            ? user.biometricPayload
+            : null,
+        positionId,
+        candidateId,
+      });
 
-        if (!res || res.success !== true) {
-          throw new Error(res?.message || res?.error || "Vote rejected");
-        }
-        succeededVotes.push(positionId); // track successes
-      } catch (err) {
+      // ✅ Robust success check
+      if (data?.success === true || data?.success === "true") {
+        succeededVotes.push({ positionId, message: data.message });
+      } else {
         failedVotes.push({
           positionId,
-          error: extractErrorMessage(err),
+          error: data?.message || "Vote rejected",
         });
       }
+    } catch (err) {
+      failedVotes.push({
+        positionId,
+        error: extractErrorMessage(err) || "Vote rejected",
+      });
     }
+  }
 
-    setFailedPositions(failedVotes.map((f) => f.positionId));
+  setFailedPositions(failedVotes.map((f) => f.positionId));
 
-    // Build per-position message
-    const msg = failedVotes
-      .map((f) => {
-        const pos = positions.find((p) => p.id === f.positionId);
-        return `${pos?.name}: ${f.error}`;
-      })
-      .join("\n");
+  // Build per-position messages
+  const errorMsg = failedVotes
+    .map((f) => {
+      const pos = positions.find((p) => p.id === f.positionId);
+      return `${pos?.name}: ${f.error}`;
+    })
+    .join("\n");
 
-    setError(msg);
+  setError(errorMsg);
 
-    if (succeededVotes.length > 0) {
-      setSuccessMsg(
-        succeededVotes.length === positions.length
-          ? "Votes submitted successfully!"
-          : `${succeededVotes.length} vote(s) submitted successfully.`,
-      );
-    }
+  // Success messages per position
+  const successMsgStr = succeededVotes
+    .map((s) => {
+      const pos = positions.find((p) => p.id === s.positionId);
+      return `${pos?.name}: ${s.message}`;
+    })
+    .join("\n");
 
-    setSubmitting(false);
-  };
+  setSuccessMsg(successMsgStr);
 
+  setSubmitting(false);
+};
+
+  
   if (loading)
     return (
       <div className="p-20 text-center animate-pulse font-mono text-blue-600">
