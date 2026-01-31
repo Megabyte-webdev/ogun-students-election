@@ -25,9 +25,6 @@ export default function VotingDashboard() {
   const [phase, setPhase] = useState("loading"); // loading | upcoming | live | ended
   const [countdown, setCountdown] = useState("");
 
-  // -----------------------------
-  // Fetch election
-  // -----------------------------
   useEffect(() => {
     async function fetchElection() {
       setLoading(true);
@@ -45,9 +42,6 @@ export default function VotingDashboard() {
     fetchElection();
   }, []);
 
-  // -----------------------------
-  // Phase + countdown controller
-  // -----------------------------
   useEffect(() => {
     if (!election) return;
 
@@ -93,9 +87,6 @@ export default function VotingDashboard() {
     return () => clearInterval(interval);
   }, [election]);
 
-  // -----------------------------
-  // Loading state
-  // -----------------------------
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">

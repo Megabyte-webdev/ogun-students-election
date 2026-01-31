@@ -2,39 +2,42 @@ import React from "react";
 
 export default function DataTable({ columns, data, emptyMessage }) {
   return (
-    <div className="overflow-x-auto bg-white shadow rounded-lg p-4">
-      <table className="min-w-full divide-y divide-gray-200">
+    <div className=" w-full max-w-full overflow-x-auto ">
+      <table className="w-full table-auto border-collapse divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
             {columns.map((col) => (
               <th
                 key={col.accessor}
-                className="px-4 py-2 text-left text-sm font-medium text-gray-700"
+                className="px-3 py-2 text-left text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap"
               >
                 {col.header}
               </th>
             ))}
           </tr>
         </thead>
+
         <tbody className="divide-y divide-gray-200">
           {data.length === 0 ? (
             <tr>
               <td
                 colSpan={columns.length}
-                className="px-4 py-2 text-center text-gray-500"
+                className="px-3 py-4 text-center text-sm text-gray-500"
               >
                 {emptyMessage || "No data found"}
               </td>
             </tr>
           ) : (
-            data.map((row) => (
-              <tr key={row.id}>
-                {columns.map((col) => (
+            data.map((row, rowIndex) => (
+              <tr
+                key={row.id ?? `row-${rowIndex}`}
+                className="hover:bg-gray-50"
+              >
+                {columns.map((col, colIndex) => (
                   <td
-                    key={col.accessor}
-                    className="px-4 py-2 text-sm text-gray-600"
+                    key={`${row.id ?? rowIndex}-${col.accessor ?? colIndex}`}
+                    className="px-3 py-2 text-xs sm:text-sm text-gray-600 "
                   >
-                    {/* If col.cell exists, call it with the row */}
                     {col.cell ? col.cell(row) : row[col.accessor]}
                   </td>
                 ))}

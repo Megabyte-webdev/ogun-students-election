@@ -72,7 +72,7 @@ const useAdmin = () => {
 
   // Positions
   const createPosition = (data) => post("positions", data);
-  const activatePosition = (id) => patch(`positions/${id}/activate`);
+  const updatePosition = (id, data) => patch(`positions/${id}`, data);
   const deletePosition = (id) => remove(`positions/${id}`);
 
   // Candidates (MULTI-FORM)
@@ -99,7 +99,7 @@ const useAdmin = () => {
     deleteElection,
 
     createPosition,
-    activatePosition,
+    updatePosition,
     deletePosition,
 
     createCandidate,

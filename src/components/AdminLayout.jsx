@@ -14,9 +14,9 @@ export default function AdminLayout({ children }) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 text-slate-900 font-sans">
+    <div className="h-screen w-full overflow-x-hidden bg-slate-100 text-slate-900 font-sans">
       {/* --- CLEAN WHITE NAVIGATION BAR --- */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 shadow-sm">
+      <header className="sticky top-0 z-50  bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 shadow-sm">
         <div className="w-full max-w-7xl mx-auto flex justify-between items-center">
           {/* Logo Section */}
           <div className="flex items-center gap-3">
@@ -65,8 +65,8 @@ export default function AdminLayout({ children }) {
       </header>
 
       {/* --- MAIN CONTENT --- */}
-      <div className="w-full max-w-7xl mx-auto flex">
-        <main className="flex-1 p-8 md:p-12">
+      <div className="w-full max-w-7xl mx-auto flex ">
+        <main className="flex-1 px-4 py-6 sm:px-6 md:p-12 max-w-full">
           {/* Breadcrumb Info */}
           <div className="flex items-center gap-2 mb-10">
             <div className="p-1.5 bg-white border border-slate-200 rounded-md shadow-sm">
@@ -79,7 +79,7 @@ export default function AdminLayout({ children }) {
           </div>
 
           {/* Page Content Container */}
-          <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="max-w-full relative animate-in fade-in slide-in-from-bottom-4 duration-700">
             {children}
           </div>
         </main>

@@ -1,3 +1,4 @@
+// PositionVoteCard.jsx
 import React, { useEffect, useState } from "react";
 import useAdmin from "../hooks/useAdmin";
 import CandidateCard from "./CandidateCard";
@@ -6,17 +7,15 @@ import { extractErrorMessage } from "../utils/formatters";
 import { axiosClient } from "../services/axios-client";
 
 export default function PositionVoteCard({ electionId, user, onClose }) {
-  const { getOpen, post } = useAdmin();
+  const { getOpen } = useAdmin();
   const [positions, setPositions] = useState([]);
-  const [votes, setVotes] = useState({}); // { positionId: candidateId }
+  const [votes, setVotes] = useState({});
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isReviewing, setIsReviewing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-
-  // Track failed positions for retry
   const [failedPositions, setFailedPositions] = useState([]);
 
   useEffect(() => {
@@ -65,8 +64,8 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
     setSubmitting(true);
     setError("");
     setSuccessMsg("");
-
     const failedVotes = [];
+    const succeededVotes = [];
 
     for (const [positionId, candidateId] of Object.entries(votes)) {
       try {
@@ -82,10 +81,10 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
           candidateId,
         });
 
-        // STRICT SUCCESS CHECK
         if (!res || res.success !== true) {
           throw new Error(res?.message || res?.error || "Vote rejected");
         }
+        succeededVotes.push(positionId); // track successes
       } catch (err) {
         failedVotes.push({
           positionId,
@@ -94,25 +93,26 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
       }
     }
 
-    if (failedVotes.length > 0) {
-      setFailedPositions(failedVotes.map((f) => f.positionId));
+    setFailedPositions(failedVotes.map((f) => f.positionId));
 
-      setError(
-        failedVotes
-          .map((f) => {
-            const pos = positions.find((p) => p.id === f.positionId);
-            return `${pos?.name}: ${f.error}`;
-          })
-          .join("\n"),
+    // Build per-position message
+    const msg = failedVotes
+      .map((f) => {
+        const pos = positions.find((p) => p.id === f.positionId);
+        return `${pos?.name}: ${f.error}`;
+      })
+      .join("\n");
+
+    setError(msg);
+
+    if (succeededVotes.length > 0) {
+      setSuccessMsg(
+        succeededVotes.length === positions.length
+          ? "Votes submitted successfully!"
+          : `${succeededVotes.length} vote(s) submitted successfully.`,
       );
-
-      setSubmitting(false);
-      return;
     }
 
-    //  SUCCESS ONLY HERE
-    setSuccessMsg("Votes submitted successfully!");
-    setFailedPositions([]);
     setSubmitting(false);
   };
 
@@ -123,7 +123,7 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
       </div>
     );
 
-  // --- REVIEW SCREEN ---
+  // REVIEW SCREEN
   if (isReviewing) {
     return (
       <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
@@ -149,18 +149,14 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
             return (
               <div
                 key={pos.id}
-                className={`p-4 flex justify-between items-center ${
-                  isFailed ? "bg-red-50" : ""
-                }`}
+                className={`p-4 flex justify-between items-center ${isFailed ? "bg-red-50" : ""}`}
               >
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                     {pos.name}
                   </p>
                   <p
-                    className={`font-bold ${
-                      isFailed ? "text-red-600" : "text-gray-800"
-                    }`}
+                    className={`font-bold ${isFailed ? "text-red-600" : "text-gray-800"}`}
                   >
                     {selectedCand?.name || "No Selection"}
                   </p>
@@ -214,10 +210,9 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
     );
   }
 
-  // --- VOTING STEPS ---
+  // VOTING SCREEN
   return (
     <div className="space-y-6">
-      {/* Progress Bar */}
       <div className="flex items-center gap-4">
         <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
@@ -245,7 +240,6 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
             {error}
           </p>
         )}
-
         {successMsg && (
           <p className="p-3 bg-green-50 text-green-600 text-xs font-bold rounded-lg border border-green-100 mb-4">
             {successMsg}
@@ -279,7 +273,7 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
         >
           {currentIndex === positions.length - 1
             ? "Review Selections"
-            : "Next Position"}{" "}
+            : "Next Position"}
           <ArrowRight size={18} />
         </button>
       </div>

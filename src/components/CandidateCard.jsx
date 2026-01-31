@@ -1,3 +1,4 @@
+// CandidateCard.jsx
 import { User, FileText, CheckCircle2 } from "lucide-react";
 
 export default function CandidateCard({
@@ -15,7 +16,6 @@ export default function CandidateCard({
           : "border-gray-100 bg-white hover:border-blue-200 hover:shadow-md"
       }`}
     >
-      {/* Profile Image Placeholder */}
       <div
         className={`w-14 h-14 rounded-full shrink-0 flex items-center justify-center border-2 ${
           selected
@@ -52,15 +52,17 @@ export default function CandidateCard({
           )}
         </div>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation(); // Prevents selecting the candidate when clicking the link
-            onViewManifesto(candidate);
-          }}
-          className="mt-1 flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-widest"
-        >
-          <FileText size={12} /> View Manifesto
-        </button>
+        {onViewManifesto && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewManifesto(candidate);
+            }}
+            className="mt-1 flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-wider"
+          >
+            <FileText size={14} /> Manifesto
+          </button>
+        )}
       </div>
     </div>
   );

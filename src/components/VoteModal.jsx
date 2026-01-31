@@ -1,3 +1,4 @@
+// VoteModal.jsx
 import React, { useState, useEffect } from "react";
 import Modal from "./Modal";
 import PositionVoteCard from "./PositionVoteCard";
@@ -5,9 +6,8 @@ import {
   Fingerprint,
   ShieldCheck,
   CreditCard,
-  Cpu,
-  ArrowRight,
   Loader2,
+  ArrowRight,
 } from "lucide-react";
 import {
   extractErrorMessage,
@@ -27,7 +27,6 @@ export default function VoteModal({ election, onClose }) {
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
-    // Generate device ID logic...
     setDeviceId(getOrCreateDeviceId());
   }, []);
 
@@ -60,7 +59,7 @@ export default function VoteModal({ election, onClose }) {
   return (
     <Modal open={!!election} onClose={onClose}>
       <div className="p-2">
-        {/* --- STEPPER INDICATOR --- */}
+        {/* --- STEPPER --- */}
         <div className="flex items-center justify-between mb-8 px-4">
           {[1, 2, 3].map((s) => (
             <React.Fragment key={s}>
@@ -86,7 +85,7 @@ export default function VoteModal({ election, onClose }) {
           ))}
         </div>
 
-        {/* --- STEP 1: IDENTITY --- */}
+        {/* STEP 1: IDENTITY */}
         {step === 1 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="text-center space-y-2">
@@ -122,12 +121,16 @@ export default function VoteModal({ election, onClose }) {
           </div>
         )}
 
-        {/* --- STEP 2: BIOMETRICS --- */}
+        {/* STEP 2: BIOMETRICS */}
         {step === 2 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-center">
             <div className="space-y-2">
               <div
-                className={`inline-flex p-6 rounded-[2.5rem] mb-2 transition-colors duration-500 ${scanning ? "bg-indigo-600 text-white animate-pulse" : "bg-slate-100 text-slate-400"}`}
+                className={`inline-flex p-6 rounded-[2.5rem] mb-2 transition-colors duration-500 ${
+                  scanning
+                    ? "bg-indigo-600 text-white animate-pulse"
+                    : "bg-slate-100 text-slate-400"
+                }`}
               >
                 {scanning ? (
                   <Loader2 size={48} className="animate-spin" />
@@ -166,7 +169,7 @@ export default function VoteModal({ election, onClose }) {
           </div>
         )}
 
-        {/* --- STEP 3: BALLOT --- */}
+        {/* STEP 3: BALLOT */}
         {step === 3 && (
           <div className="animate-in fade-in zoom-in-95 duration-500">
             <PositionVoteCard

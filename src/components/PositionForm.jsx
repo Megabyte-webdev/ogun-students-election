@@ -19,8 +19,9 @@ const Message = ({ type, children }) => (
   </div>
 );
 
-export default function PositionForm({ onCreated }) {
-  const { createPosition, get } = useAdmin();
+export default function PositionForm({ onCreated, position }) {
+  const { createPosition, updatePosition, get } = useAdmin();
+
   const [form, setForm] = useState({ electionId: "", name: "" });
   const [elections, setElections] = useState([]);
   const [status, setStatus] = useState({
@@ -36,44 +37,58 @@ export default function PositionForm({ onCreated }) {
         setElections(res.elections);
         setForm((prev) => ({
           ...prev,
-          electionId: res.elections[0].id, // auto-select first election
+          electionId: position?.electionId || res.elections[0].id,
+          name: position?.name || prev.name,
         }));
       }
     });
-  }, []);
+  }, [position]);
 
   const handleChange = (key) => (e) =>
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!form.electionId)
       return setStatus({ ...status, error: "Select an election first" });
     if (!form.name.trim())
       return setStatus({ ...status, error: "Position name is required" });
 
     setStatus({ loading: true, error: "", success: "" });
+
     try {
-      const res = await createPosition(form);
+      let res;
+      if (position?.id) {
+        // Update mode
+        res = await updatePosition(position.id, form);
+      } else {
+        // Create mode
+        res = await createPosition(form);
+      }
+
       if (res.success) {
         setStatus({
           loading: false,
           error: "",
-          success: "Position created successfully!",
+          success: position?.id
+            ? "Position updated successfully!"
+            : "Position created successfully!",
         });
-        onCreated(res.positionId);
-        setForm({ electionId: "", name: "" });
+        onCreated(res.position || res.positionId);
+        // Reset form only if creating new
+        if (!position?.id) setForm({ electionId: "", name: "" });
       } else {
         setStatus({
           loading: false,
-          error: res.message || "Failed to create position",
+          error: res.message || "Operation failed",
           success: "",
         });
       }
     } catch {
       setStatus({
         loading: false,
-        error: "Error creating position",
+        error: "Internal error occurred",
         success: "",
       });
     }
@@ -87,7 +102,9 @@ export default function PositionForm({ onCreated }) {
       {status.success && <Message type="success">{status.success}</Message>}
       {status.error && <Message type="error">{status.error}</Message>}
 
-      <h2 className="text-lg font-semibold text-gray-900">Create Position</h2>
+      <h2 className="text-lg font-semibold text-gray-900">
+        {position?.id ? "Update Position" : "Create Position"}
+      </h2>
 
       <select
         value={form.electionId}
@@ -111,20 +128,28 @@ export default function PositionForm({ onCreated }) {
       />
 
       <div className="flex justify-end space-x-2">
-        <button
-          type="button"
-          onClick={() => setForm({ electionId: "", name: "" })}
-          className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
-          disabled={status.loading}
-        >
-          Clear
-        </button>
+        {!position?.id && (
+          <button
+            type="button"
+            onClick={() => setForm({ electionId: "", name: "" })}
+            className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
+            disabled={status.loading}
+          >
+            Clear
+          </button>
+        )}
         <button
           type="submit"
           disabled={status.loading}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
         >
-          {status.loading ? "Creating..." : "Create Position"}
+          {status.loading
+            ? position?.id
+              ? "Updating..."
+              : "Creating..."
+            : position?.id
+              ? "Update Position"
+              : "Create Position"}
         </button>
       </div>
     </form>

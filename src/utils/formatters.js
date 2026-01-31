@@ -82,3 +82,24 @@ export const getCurrentSession = () => {
     return `Academic Session ${currentYear}/${currentYear + 1}`;
   }
 };
+
+export const TABS = [
+  { id: "elections", label: "Elections", icon: "Calendar", color: "blue" },
+  { id: "positions", label: "Positions", icon: "FileText", color: "green" },
+  { id: "candidates", label: "Candidates", icon: "Users", color: "purple" },
+  { id: "votes", label: "Votes", icon: "Vote", color: "orange" },
+  { id: "abuse", label: "Security Logs", icon: "ShieldAlert", color: "red" },
+];
+
+export function formatDateTime(dateStr) {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  return new Intl.DateTimeFormat("en-GB", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(date);
+}

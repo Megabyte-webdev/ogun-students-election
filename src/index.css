@@ -1,1 +1,40 @@
 @import "tailwindcss";
+
+body {
+  width: 100vw;
+  height: 100vh;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 2px; /* Set the width of the scrollbar */
+  height: 0px; /* Set the height for horizontal scrollbar (if any) */
+}
+
+/* Style the track (the background of the scrollbar) */
+::-webkit-scrollbar-track {
+  background: #999; /* Light gray track color */
+  border-radius: 10px; /* Rounded corners for the track */
+}
+
+/* Style the thumb (the draggable part of the scrollbar) */
+::-webkit-scrollbar-thumb {
+  background: #136ab0; /* Dark gray thumb color */
+  border-radius: 10px; /* Rounded corners for the thumb */
+}
+
+/* Style the thumb when it's being hovered */
+::-webkit-scrollbar-thumb:hover {
+  background: #0f5a02; /* Darker color when hovered */
+}
+
+/* Optional: Style for the corner where the vertical and horizontal scrollbars meet */
+::-webkit-scrollbar-corner {
+  background: #f1f1f1;
+}
+@media (max-width: 600px) {
+  ::-webkit-scrollbar {
+    width: 0px; /* Set the width of the scrollbar */
+    height: 0px; /* Set the height for horizontal scrollbar (if any) */
+  }
+}
