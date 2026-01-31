@@ -81,7 +81,7 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
         candidateId,
       });
 
-      // ✅ Robust success check
+      //  Robust success check
       if (data?.success === true || data?.success === "true") {
         succeededVotes.push({ positionId, message: data.message });
       } else {
@@ -131,49 +131,74 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
       </div>
     );
 
-  // REVIEW SCREEN
-  if (isReviewing) {
-    return (
-      <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-            <ShieldCheck className="text-green-600" size={32} />
-          </div>
-          <h2 className="text-2xl font-black text-gray-900 uppercase">
-            Review Your Ballot
-          </h2>
-          <p className="text-gray-500 text-sm">
-            Please confirm your selections before final encryption.
-          </p>
+  // --- REVIEW SCREEN ---
+if (isReviewing) {
+  return (
+    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+      <div className="text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+          <ShieldCheck className="text-green-600" size={32} />
         </div>
+        <h2 className="text-2xl font-black text-gray-900 uppercase">
+          Review Your Ballot
+        </h2>
+        <p className="text-gray-500 text-sm">
+          Please confirm your selections before final encryption.
+        </p>
+      </div>
 
-        <div className="bg-gray-50 rounded-2xl border border-gray-200 divide-y divide-gray-200">
-          {positions.map((pos) => {
-            const selectedCand = pos.candidates.find(
-              (c) => c.id === votes[pos.id],
-            );
-            const isFailed = failedPositions.includes(pos.id);
+      <div className="bg-gray-50 rounded-2xl border border-gray-200 divide-y divide-gray-200">
+        {positions.map((pos) => {
+          const selectedCand = pos.candidates.find(
+            (c) => c.id === votes[pos.id]
+          );
+          const isFailed = failedPositions.includes(pos.id);
+          const isSuccess = !isFailed && selectedCand;
 
-            return (
-              <div
-                key={pos.id}
-                className={`p-4 flex justify-between items-center ${isFailed ? "bg-red-50" : ""}`}
-              >
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    {pos.name}
+          return (
+            <div
+              key={pos.id}
+              className={`p-4 flex justify-between items-center ${
+                isFailed
+                  ? "bg-red-50"
+                  : isSuccess
+                  ? "bg-green-50"
+                  : ""
+              }`}
+            >
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  {pos.name}
+                </p>
+                <p
+                  className={`font-bold ${
+                    isFailed
+                      ? "text-red-600"
+                      : isSuccess
+                      ? "text-green-700"
+                      : "text-gray-800"
+                  }`}
+                >
+                  {selectedCand?.name || "No Selection"}
+                </p>
+                {isFailed && (
+                  <p className="text-red-500 text-xs font-bold">
+                    {error
+                      .split("\n")
+                      .find((line) => line.startsWith(pos.name)) ||
+                      "Submission failed. Retry."}
                   </p>
-                  <p
-                    className={`font-bold ${isFailed ? "text-red-600" : "text-gray-800"}`}
-                  >
-                    {selectedCand?.name || "No Selection"}
+                )}
+                {isSuccess && (
+                  <p className="text-green-600 text-xs font-bold">
+                    {successMsg
+                      .split("\n")
+                      .find((line) => line.startsWith(pos.name))}
                   </p>
-                  {isFailed && (
-                    <p className="text-red-500 text-xs font-bold">
-                      Submission failed. Retry.
-                    </p>
-                  )}
-                </div>
+                )}
+              </div>
+
+              {isFailed && (
                 <button
                   onClick={() => {
                     setIsReviewing(false);
@@ -183,41 +208,32 @@ export default function PositionVoteCard({ electionId, user, onClose }) {
                 >
                   Change
                 </button>
-              </div>
-            );
-          })}
-        </div>
-
-        {error && (
-          <p className="p-3 bg-red-50 text-red-600 text-xs font-bold rounded-lg border border-red-100 whitespace-pre-wrap">
-            {error}
-          </p>
-        )}
-        {successMsg && (
-          <p className="p-3 bg-green-50 text-green-600 text-xs font-bold rounded-lg border border-green-100">
-            {successMsg}
-          </p>
-        )}
-
-        <div className="flex gap-3 pt-4">
-          <button
-            onClick={() => setIsReviewing(false)}
-            className="px-6 py-3 rounded-xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 transition-all"
-          >
-            Edit
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="grow bg-green-600 text-white py-4 rounded-xl font-black uppercase tracking-tight shadow-lg hover:bg-green-700 disabled:bg-gray-400 transition-all"
-          >
-            {submitting ? "Processing..." : "Confirm & Cast Ballot"}
-          </button>
-        </div>
+              )}
+            </div>
+          );
+        })}
       </div>
-    );
-  }
 
+      <div className="flex gap-3 pt-4">
+        <button
+          onClick={() => setIsReviewing(false)}
+          className="px-6 py-3 rounded-xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 transition-all"
+        >
+          Edit
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={submitting || failedPositions.length === 0}
+          className="grow bg-green-600 text-white py-4 rounded-xl font-black uppercase tracking-tight shadow-lg hover:bg-green-700 disabled:bg-gray-400 transition-all"
+        >
+          {submitting ? "Processing..." : "Confirm & Cast Ballot"}
+        </button>
+      </div>
+    </div>
+  );
+}
+  
+  
   // VOTING SCREEN
   return (
     <div className="space-y-6">
