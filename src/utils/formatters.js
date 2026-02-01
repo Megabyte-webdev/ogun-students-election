@@ -103,3 +103,35 @@ export function formatDateTime(dateStr) {
     second: "2-digit",
   }).format(date);
 }
+
+export function parseDatetimeLocal(isoString) {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  const pad = (n) => n.toString().padStart(2, "0");
+
+  const localYear = d.getFullYear();
+  const localMonth = pad(d.getMonth() + 1);
+  const localDate = pad(d.getDate());
+  const localHours = pad(d.getHours());
+  const localMinutes = pad(d.getMinutes());
+
+  return `${localYear}-${localMonth}-${localDate}T${localHours}:${localMinutes}`;
+}
+
+export function toLocalDatetimeString(isoString) {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  const pad = (n) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Add days in local time
+export function addDaysLocal(datetimeLocalString, days = 1) {
+  if (!datetimeLocalString) return "";
+  const [datePart, timePart] = datetimeLocalString.split("T");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [h, min] = timePart.split(":").map(Number);
+  const dt = new Date(y, m - 1, d + days, h, min); // local date
+  const pad = (n) => n.toString().padStart(2, "0");
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+}
