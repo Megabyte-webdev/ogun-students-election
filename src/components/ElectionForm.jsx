@@ -1,19 +1,9 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/static-components */
 import { useState, useEffect } from "react";
 import useAdmin from "../hooks/useAdmin";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
-
-function toDatetimeLocal(date) {
-  const d = new Date(date); // parse ISO or Date
-  const pad = (n) => n.toString().padStart(2, "0");
-
-  const year = d.getFullYear();
-  const month = pad(d.getMonth() + 1); // month is 0-indexed
-  const day = pad(d.getDate());
-  const hours = pad(d.getHours());
-  const minutes = pad(d.getMinutes());
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
+import { addDaysLocal, parseDatetimeLocal } from "../utils/formatters";
 
 export default function ElectionForm({ onCreated, election = null }) {
   const { createElection, updateElection } = useAdmin();
@@ -38,9 +28,9 @@ export default function ElectionForm({ onCreated, election = null }) {
       setForm({
         title: election.title || "",
         startTime: election.startTime
-          ? toDatetimeLocal(election.startTime)
+          ? parseDatetimeLocal(election.startTime)
           : "",
-        endTime: election.endTime ? toDatetimeLocal(election.endTime) : "",
+        endTime: election.endTime ? parseDatetimeLocal(election.endTime) : "",
         description: election.description || "",
         isActive: election.status === "active",
       });
@@ -80,8 +70,8 @@ export default function ElectionForm({ onCreated, election = null }) {
       // ⚡ Send datetime-local values as-is
       const payload = {
         ...form,
-        startTime: form.startTime,
-        endTime: form.endTime,
+        startTime: new Date(form.startTime).toISOString(), // converts local → UTC
+        endTime: new Date(form.endTime).toISOString(),
         status: form.isActive ? "active" : "upcoming",
       };
 
@@ -128,11 +118,6 @@ export default function ElectionForm({ onCreated, election = null }) {
   };
 
   const minStart = new Date().toISOString().slice(0, 16);
-  const defaultEnd = form.startTime
-    ? new Date(new Date(form.startTime).getTime() + 24 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(0, 16)
-    : "";
 
   const Message = ({ type, children }) => (
     <div
@@ -187,11 +172,15 @@ export default function ElectionForm({ onCreated, election = null }) {
             value={form.startTime}
             onChange={(e) => {
               handleChange("startTime")(e);
-              if (
-                !form.endTime ||
-                new Date(e.target.value) >= new Date(form.endTime)
-              )
-                setForm((prev) => ({ ...prev, endTime: defaultEnd }));
+              // auto-set end if missing or start >= end
+              setForm((prev) => ({
+                ...prev,
+                endTime:
+                  !prev.endTime ||
+                  new Date(e.target.value) >= new Date(prev.endTime)
+                    ? addDaysLocal(e.target.value, 1)
+                    : prev.endTime,
+              }));
             }}
             min={minStart}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"

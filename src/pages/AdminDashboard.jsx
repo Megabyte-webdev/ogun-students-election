@@ -145,6 +145,7 @@ export default function AdminDashboard() {
             onCreated={() => {
               fetchTabData("elections");
               fetchStats();
+              setModal({ type: "elections", open: false });
             }}
           />
         )}
@@ -154,6 +155,7 @@ export default function AdminDashboard() {
             onCreated={() => {
               fetchTabData("positions");
               fetchStats();
+              setModal({ type: "positions", open: false });
             }}
           />
         )}
@@ -163,6 +165,7 @@ export default function AdminDashboard() {
             onCreated={() => {
               fetchTabData("candidates");
               fetchStats();
+              setModal({ type: "candidates", open: false });
             }}
           />
         )}

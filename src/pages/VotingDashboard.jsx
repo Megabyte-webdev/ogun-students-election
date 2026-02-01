@@ -17,6 +17,14 @@ function EmptyState() {
   );
 }
 
+// Helper to format milliseconds into hh:mm:ss
+function formatCountdown(diffMs) {
+  const h = Math.floor(diffMs / 3600000);
+  const m = Math.floor((diffMs % 3600000) / 60000);
+  const s = Math.floor((diffMs % 60000) / 1000);
+  return `${String(h).padStart(2, "0")}h : ${String(m).padStart(2, "0")}m : ${String(s).padStart(2, "0")}s`;
+}
+
 export default function VotingDashboard() {
   const { getOpen } = useAdmin();
 
@@ -25,6 +33,7 @@ export default function VotingDashboard() {
   const [phase, setPhase] = useState("loading"); // loading | upcoming | live | ended
   const [countdown, setCountdown] = useState("");
 
+  // Fetch active election
   useEffect(() => {
     async function fetchElection() {
       setLoading(true);
@@ -42,47 +51,33 @@ export default function VotingDashboard() {
     fetchElection();
   }, []);
 
+  // Countdown and phase updater
   useEffect(() => {
     if (!election) return;
 
-    const interval = setInterval(() => {
+    const start = new Date(election.startTime);
+    const end = new Date(election.endTime);
+
+    const updatePhase = () => {
       const now = new Date();
-      const start = new Date(election.startTime);
-      const end = new Date(election.endTime);
 
       if (now < start) {
         setPhase("upcoming");
-
-        const diff = start - now;
-        const h = Math.floor(diff / 3600000);
-        const m = Math.floor((diff % 3600000) / 60000);
-        const s = Math.floor((diff % 60000) / 1000);
-
-        setCountdown(
-          `Starts in ${String(h).padStart(2, "0")}h : ${String(m).padStart(
-            2,
-            "0",
-          )}m : ${String(s).padStart(2, "0")}s`,
-        );
+        setCountdown(`Starts in ${formatCountdown(start - now)}`);
       } else if (now >= start && now < end) {
         setPhase("live");
-
-        const diff = end - now;
-        const h = Math.floor(diff / 3600000);
-        const m = Math.floor((diff % 3600000) / 60000);
-        const s = Math.floor((diff % 60000) / 1000);
-
-        setCountdown(
-          `${String(h).padStart(2, "0")}h : ${String(m).padStart(
-            2,
-            "0",
-          )}m : ${String(s).padStart(2, "0")}s`,
-        );
+        setCountdown(`Ends in ${formatCountdown(end - now)}`);
       } else {
         setPhase("ended");
         setCountdown("Election ended");
       }
-    }, 1000);
+    };
+
+    // Run immediately
+    updatePhase();
+
+    // Update every second
+    const interval = setInterval(updatePhase, 1000);
 
     return () => clearInterval(interval);
   }, [election]);
@@ -102,7 +97,6 @@ export default function VotingDashboard() {
       <Navbar />
 
       <main className="max-w-6xl mx-auto p-8">
-        {/* HEADER */}
         <header className="mb-12">
           <h1 className="text-5xl font-black tracking-tight text-slate-900 leading-none">
             Digital <span className="text-indigo-600">Ballot</span>
@@ -123,8 +117,7 @@ export default function VotingDashboard() {
               <div className="flex-1 space-y-6">
                 {/* STATUS BADGE */}
                 <div
-                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border
-                  ${
+                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
                     phase === "live"
                       ? "bg-green-50 text-green-700 border-green-100"
                       : phase === "upcoming"
@@ -142,19 +135,21 @@ export default function VotingDashboard() {
                 </h2>
 
                 {/* COUNTDOWN */}
-                <div className="flex items-center gap-6 py-2">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
-                      {phase === "upcoming"
-                        ? "Election Starts"
-                        : "Election Ends"}
-                    </span>
-                    <span className="font-mono text-lg font-bold text-slate-700 flex items-center gap-2">
-                      <Timer size={18} className="text-indigo-500" />
-                      {countdown}
-                    </span>
+                {phase !== "ended" && (
+                  <div className="flex items-center gap-6 py-2">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
+                        {phase === "upcoming"
+                          ? "Election Starts"
+                          : "Election Ends"}
+                      </span>
+                      <span className="font-mono text-lg font-bold text-slate-700 flex items-center gap-2">
+                        <Timer size={18} className="text-indigo-500" />
+                        {countdown}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* PHASE MESSAGE */}
                 {phase === "upcoming" && (
