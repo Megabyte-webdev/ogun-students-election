@@ -3,20 +3,37 @@ import { io } from "socket.io-client";
 
 export default function useLiveVotes() {
   const [voteSummary, setVoteSummary] = useState({});
+  const [isSocketLoading, setIsSocketLoading] = useState(true);
 
   useEffect(() => {
-    // Replace with your actual backend URL
-    const socket = io(import.meta.env.VITE_BASE_URL);
+    console.log("Attempting to connect to:", import.meta.env.VITE_BASE_URL);
 
-    // Listen for the specific init event from your logs
+    const socket = io(import.meta.env.VITE_BASE_URL, {
+      transports: ["polling", "websocket"],
+      reconnectionAttempts: 5,
+    });
+
+    socket.on("connect", () => {
+      console.log("✅ Socket Connected! ID:", socket.id);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("❌ Connection Error:", err.message);
+    });
+
+    // Listen for the initial data
     socket.on("vote:update:init", (data) => {
-      if (data.voteSummary) {
+      console.log("📦 Received Initial Data:", data);
+      if (data && data.voteSummary) {
         setVoteSummary(data.voteSummary);
+        setIsSocketLoading(false);
+      } else {
+        console.warn("⚠️ Data received but voteSummary is missing:", data);
       }
     });
 
-    // Listener for incremental updates (if backend sends individual votes)
     socket.on("vote:update", (data) => {
+      console.log("⚡ New Vote Received:", data);
       setVoteSummary((prev) => ({
         ...prev,
         [data.positionId]: {
@@ -27,8 +44,10 @@ export default function useLiveVotes() {
       }));
     });
 
-    return () => socket.disconnect();
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
-  return voteSummary;
+  return { voteSummary, isSocketLoading };
 }
